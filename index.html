@@ -45,26 +45,84 @@
     <div><p class="eyebrow">CONTROL DE GASTOS</p><h2 id="welcome-title">Hola</h2></div>
     <button id="logout-button" class="secondary" type="button">Cerrar sesión</button>
   </header>
+
   <nav class="nav-tabs" aria-label="Navegación principal">
-    <button class="nav-tab active" type="button">Inicio</button>
+    <button class="nav-tab active" data-view="home" type="button">Inicio</button>
     <button class="nav-tab" type="button" disabled>Movimientos</button>
     <button class="nav-tab" type="button" disabled>Comparativas</button>
-    <button class="nav-tab" type="button" disabled>Configurar mes</button>
+    <button class="nav-tab" data-view="configure" type="button">Configurar mes</button>
   </nav>
-  <section class="hero-card">
-    <div>
-      <p class="eyebrow">CUENTA CONECTADA</p>
-      <h3>La autenticación ya funciona con Supabase.</h3>
-      <p class="muted">El siguiente paso será crear tu primer mes y conectar presupuestos y movimientos.</p>
-    </div>
-    <div class="status-pill">Supabase conectado</div>
+
+  <div id="app-message" class="message hidden"></div>
+
+  <section id="home-view">
+    <section class="hero-card">
+      <div>
+        <p class="eyebrow">MES ACTUAL</p>
+        <h3 id="current-month-title">Mes actual</h3>
+        <p id="month-status" class="muted">Configura tu ingreso y presupuestos para comenzar.</p>
+      </div>
+      <button id="go-configure" class="primary compact" type="button">Configurar mes</button>
+    </section>
+
+    <section class="summary-grid">
+      <article class="summary-card">
+        <span>Ingreso mensual</span>
+        <strong id="summary-income">$0,00</strong>
+      </article>
+      <article class="summary-card">
+        <span>Presupuesto asignado</span>
+        <strong id="summary-budget">$0,00</strong>
+      </article>
+      <article class="summary-card">
+        <span>Margen potencial</span>
+        <strong id="summary-margin">$0,00</strong>
+      </article>
+    </section>
+
+    <section class="panel">
+      <div class="panel-heading">
+        <div><p class="eyebrow">CATEGORÍAS</p><h3>Tus presupuestos</h3></div>
+        <span id="category-count" class="counter">0</span>
+      </div>
+      <div id="categories-grid" class="categories-grid"></div>
+    </section>
   </section>
-  <section class="panel">
-    <div class="panel-heading">
-      <div><p class="eyebrow">CONFIGURACIÓN INICIAL</p><h3>Tus categorías</h3></div>
-      <span id="category-count" class="counter">0</span>
-    </div>
-    <div id="categories-grid" class="categories-grid"></div>
+
+  <section id="configure-view" class="hidden">
+    <section class="panel config-panel">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">CONFIGURAR MES</p>
+          <h3 id="configure-month-title">Mes actual</h3>
+          <p class="muted no-margin">Define tu ingreso y cuánto quieres asignar a cada categoría.</p>
+        </div>
+      </div>
+
+      <div class="income-block">
+        <label>Ingreso mensual
+          <div class="money-input"><span>$</span><input id="monthly-income" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></div>
+        </label>
+      </div>
+
+      <div class="budget-header">
+        <span>Categoría</span><span>Presupuesto</span><span>% ingreso</span>
+      </div>
+      <div id="budget-rows" class="budget-rows"></div>
+
+      <div class="budget-summary">
+        <div><span>Total asignado</span><strong id="assigned-total">$0,00</strong></div>
+        <div><span>Margen potencial</span><strong id="potential-margin">$0,00</strong></div>
+        <div><span>Total asignado</span><strong id="assigned-percent">0%</strong></div>
+      </div>
+
+      <div id="budget-warning" class="warning hidden">Tus presupuestos superan el ingreso mensual.</div>
+
+      <div class="action-row">
+        <button id="save-month" class="secondary" type="button">Guardar solo este mes</button>
+        <button id="save-base" class="primary" type="button">Guardar como nueva base</button>
+      </div>
+    </section>
   </section>
 </section>
 </main>
