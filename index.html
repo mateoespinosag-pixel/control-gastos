@@ -48,7 +48,7 @@
 
   <nav class="nav-tabs" aria-label="Navegación principal">
     <button class="nav-tab active" data-view="home" type="button">Inicio</button>
-    <button class="nav-tab" type="button" disabled>Movimientos</button>
+    <button class="nav-tab" data-view="transactions" type="button">Movimientos</button>
     <button class="nav-tab" type="button" disabled>Comparativas</button>
     <button class="nav-tab" data-view="configure" type="button">Configurar mes</button>
   </nav>
@@ -66,18 +66,10 @@
     </section>
 
     <section class="summary-grid">
-      <article class="summary-card">
-        <span>Ingreso mensual</span>
-        <strong id="summary-income">$0,00</strong>
-      </article>
-      <article class="summary-card">
-        <span>Presupuesto asignado</span>
-        <strong id="summary-budget">$0,00</strong>
-      </article>
-      <article class="summary-card">
-        <span>Margen potencial</span>
-        <strong id="summary-margin">$0,00</strong>
-      </article>
+      <article class="summary-card"><span>Ingreso mensual</span><strong id="summary-income">$0,00</strong></article>
+      <article class="summary-card"><span>Gastado</span><strong id="summary-spent">$0,00</strong></article>
+      <article class="summary-card"><span>Disponible</span><strong id="summary-available">$0,00</strong></article>
+      <article class="summary-card"><span>Ahorro actual</span><strong id="summary-savings-rate">0%</strong></article>
     </section>
 
     <section class="panel">
