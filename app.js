@@ -17,6 +17,8 @@ const logoutButton=document.querySelector('#logout-button');
 const forgotPasswordButton=document.querySelector('#forgot-password');
 const homeView=document.querySelector('#home-view');
 const configureView=document.querySelector('#configure-view');
+const transactionsView=document.querySelector('#transactions-view');
+const transactionForm=document.querySelector('#transaction-form');
 const incomeInput=document.querySelector('#monthly-income');
 
 let currentUser=null;
@@ -24,6 +26,7 @@ let categories=[];
 let monthlyBudgets={};
 let baseBudgets={};
 let activePeriod=null;
+let transactions=[];
 
 function money(value){
   return new Intl.NumberFormat('es-EC',{style:'currency',currency:'USD',minimumFractionDigits:2}).format(Number(value||0));
@@ -70,6 +73,7 @@ function setView(view){
   clearMessage('app');
   homeView.classList.toggle('hidden',view!=='home');
   configureView.classList.toggle('hidden',view!=='configure');
+  transactionsView.classList.toggle('hidden',view!=='transactions');
   document.querySelectorAll('.nav-tab[data-view]').forEach(btn=>{
     btn.classList.toggle('active',btn.dataset.view===view);
   });
@@ -153,6 +157,17 @@ async function loadCurrentPeriod(){
   return data;
 }
 
+async function loadTransactions(periodId){
+  if(!periodId)return [];
+  const {data,error}=await supabase.from('transactions')
+    .select('id,transaction_date,description,amount,category_id,created_at')
+    .eq('monthly_period_id',periodId)
+    .order('transaction_date',{ascending:false})
+    .order('created_at',{ascending:false});
+  if(error)throw error;
+  return data??[];
+}
+
 async function loadMonthlyBudgets(periodId){
   if(!periodId)return {};
   const {data,error}=await supabase.from('monthly_budgets')
@@ -164,28 +179,41 @@ async function loadMonthlyBudgets(periodId){
 
 function renderHome(){
   const income=Number(activePeriod?.income||0);
-  const budgetTotal=categories.reduce((sum,c)=>sum+Number(monthlyBudgets[c.id]??baseBudgets[c.id]??0),0);
-  const margin=income-budgetTotal;
+  const spentTotal=transactions.reduce((sum,t)=>sum+Number(t.amount||0),0);
+  const available=income-spentTotal;
+  const savingsRate=income>0 ? (available/income*100) : 0;
 
   document.querySelector('#current-month-title').textContent=monthLabel();
   document.querySelector('#configure-month-title').textContent=monthLabel();
+  document.querySelector('#transactions-month-title').textContent=monthLabel();
   document.querySelector('#summary-income').textContent=money(income);
-  document.querySelector('#summary-budget').textContent=money(budgetTotal);
-  document.querySelector('#summary-margin').textContent=money(margin);
+  document.querySelector('#summary-spent').textContent=money(spentTotal);
+  document.querySelector('#summary-available').textContent=money(available);
+  document.querySelector('#summary-savings-rate').textContent=`${savingsRate.toFixed(1)}%`;
   document.querySelector('#month-status').textContent=activePeriod
     ? 'Tu configuración mensual está guardada.'
     : 'Configura tu ingreso y presupuestos para comenzar.';
+
+  const spentByCategory={};
+  for(const t of transactions){
+    spentByCategory[t.category_id]=(spentByCategory[t.category_id]||0)+Number(t.amount||0);
+  }
 
   const grid=document.querySelector('#categories-grid');
   document.querySelector('#category-count').textContent=categories.length;
   grid.innerHTML='';
   for(const c of categories){
-    const amount=Number(monthlyBudgets[c.id]??baseBudgets[c.id]??0);
+    const budget=Number(monthlyBudgets[c.id]??baseBudgets[c.id]??0);
+    const spent=Number(spentByCategory[c.id]||0);
+    const remaining=budget-spent;
+    const pct=budget>0 ? spent/budget*100 : 0;
     const item=document.createElement('article');
-    item.className='category-card';
-    item.innerHTML=`<strong></strong><b></b><span>Presupuesto mensual</span>`;
+    item.className='category-card'+(spent>budget&&budget>0?' over':'');
+    item.innerHTML=`<strong></strong><b></b><span class="category-status"></span><div class="category-progress"><span></span></div>`;
     item.querySelector('strong').textContent=c.name;
-    item.querySelector('b').textContent=money(amount);
+    item.querySelector('b').textContent=`${money(spent)} / ${money(budget)}`;
+    item.querySelector('.category-status').textContent=remaining>=0?`Disponible: ${money(remaining)}`:`Excedido: ${money(Math.abs(remaining))}`;
+    item.querySelector('.category-progress span').style.width=`${Math.min(pct,100)}%`;
     grid.appendChild(item);
   }
 }
@@ -317,6 +345,78 @@ async function saveConfiguration(saveAsBase=false){
 document.querySelector('#save-month').addEventListener('click',()=>saveConfiguration(false));
 document.querySelector('#save-base').addEventListener('click',()=>saveConfiguration(true));
 
+function renderTransactionForm(){
+  const select=document.querySelector('#transaction-category');
+  select.innerHTML='<option value="">Selecciona una categoría</option>';
+  for(const c of categories){
+    const option=document.createElement('option');
+    option.value=c.id;
+    option.textContent=c.name;
+    select.appendChild(option);
+  }
+  const today=new Date();
+  document.querySelector('#transaction-date').value=today.toISOString().slice(0,10);
+}
+
+function renderTransactions(){
+  const list=document.querySelector('#transactions-list');
+  const empty=document.querySelector('#transactions-empty');
+  const total=transactions.reduce((sum,t)=>sum+Number(t.amount||0),0);
+  document.querySelector('#transactions-total').textContent=money(total);
+  list.innerHTML='';
+  empty.classList.toggle('hidden',transactions.length>0);
+  for(const t of transactions){
+    const category=categories.find(c=>c.id===t.category_id);
+    const row=document.createElement('div');
+    row.className='transaction-row';
+    row.innerHTML='<span class="transaction-date"></span><span class="transaction-description"></span><span class="transaction-category"></span><span class="transaction-amount"></span><button class="icon-button" type="button" aria-label="Eliminar">×</button>';
+    row.querySelector('.transaction-date').textContent=new Intl.DateTimeFormat('es-EC',{day:'2-digit',month:'short'}).format(new Date(t.transaction_date+'T12:00:00'));
+    row.querySelector('.transaction-description').textContent=t.description;
+    row.querySelector('.transaction-category').textContent=category?.name||'Sin categoría';
+    row.querySelector('.transaction-amount').textContent=money(t.amount);
+    row.querySelector('.icon-button').addEventListener('click',()=>deleteTransaction(t.id));
+    list.appendChild(row);
+  }
+}
+
+transactionForm.addEventListener('submit',async(e)=>{
+  e.preventDefault(); clearMessage('app');
+  if(!activePeriod){showMessage('Primero configura el mes actual.','error','app');setView('configure');return;}
+  const transactionDate=document.querySelector('#transaction-date').value;
+  const description=document.querySelector('#transaction-description').value.trim();
+  const categoryId=document.querySelector('#transaction-category').value;
+  const amount=Number(document.querySelector('#transaction-amount').value||0);
+  if(!transactionDate||!description||!categoryId||amount<=0){showMessage('Completa todos los campos del gasto.','error','app');return;}
+  if(transactionDate.slice(0,7)!==monthDateString().slice(0,7)){showMessage('La fecha debe pertenecer al mes actual.','error','app');return;}
+  const button=transactionForm.querySelector('button[type="submit"]');
+  button.disabled=true; button.textContent='Guardando…';
+  const {data,error}=await supabase.from('transactions').insert({
+    user_id:currentUser.id,
+    monthly_period_id:activePeriod.id,
+    category_id:categoryId,
+    transaction_date:transactionDate,
+    description,
+    amount
+  }).select('id,transaction_date,description,amount,category_id,created_at').single();
+  button.disabled=false; button.textContent='Registrar gasto';
+  if(error){showMessage('No pudimos registrar el gasto. Inténtalo nuevamente.','error','app');return;}
+  transactions.unshift(data);
+  transactionForm.reset();
+  renderTransactionForm();
+  renderTransactions();
+  renderHome();
+  showMessage('Gasto registrado correctamente.','success','app');
+});
+
+async function deleteTransaction(id){
+  const {error}=await supabase.from('transactions').delete().eq('id',id);
+  if(error){showMessage('No pudimos eliminar el movimiento.','error','app');return;}
+  transactions=transactions.filter(t=>t.id!==id);
+  renderTransactions();
+  renderHome();
+  showMessage('Movimiento eliminado.','success','app');
+}
+
 async function refreshAppData(){
   const [loadedCategories,loadedBase,period]=await Promise.all([
     loadCategories(),loadBaseBudgets(),loadCurrentPeriod()
@@ -325,8 +425,11 @@ async function refreshAppData(){
   baseBudgets=loadedBase;
   activePeriod=period;
   monthlyBudgets=await loadMonthlyBudgets(period?.id);
+  transactions=await loadTransactions(period?.id);
   renderHome();
   renderBudgetRows();
+  renderTransactionForm();
+  renderTransactions();
 }
 
 async function renderSession(){
