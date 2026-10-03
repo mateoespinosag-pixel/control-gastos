@@ -443,15 +443,18 @@ async function renderSession(){
 
   try{
     currentUser=session.user;
-    const profile=await loadProfile(currentUser.id);
-    document.querySelector('#welcome-title').textContent=`Hola, ${profile.name}`;
-    await refreshAppData();
     authView.classList.add('hidden');
     dashboardView.classList.remove('hidden');
     setView('home');
+
+    const profile=await loadProfile(currentUser.id);
+    document.querySelector('#welcome-title').textContent=`Hola, ${profile.name}`;
+    await refreshAppData();
   }catch(error){
     console.error(error);
-    showMessage('La sesión está activa, pero no pudimos cargar tus datos. Actualiza la página e inténtalo nuevamente.','error','app');
+    authView.classList.add('hidden');
+    dashboardView.classList.remove('hidden');
+    showMessage('Ingresaste correctamente, pero hubo un problema al cargar una parte de tus datos. Actualiza la página.','error','app');
   }
 }
 
