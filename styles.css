@@ -73,3 +73,13 @@ select:focus{border-color:#a7bbb4;box-shadow:0 0 0 4px rgba(31,111,89,.08)}
   .category-actions{justify-content:flex-start}
   .status-button{width:100%}
 }
+
+/* Ajuste de inputs monetarios */
+.money-input{position:relative}
+.money-input span{left:14px;z-index:2;pointer-events:none}
+.money-input input{padding-left:38px!important}
+.budget-row .money-input input{padding-left:40px!important}
+@media(max-width:600px){
+  .money-input input{padding-left:40px!important}
+  .budget-row .money-input input{padding-left:42px!important}
+}
