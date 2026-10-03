@@ -81,6 +81,48 @@
     </section>
   </section>
 
+  <section id="transactions-view" class="hidden">
+    <section class="panel movements-panel">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">MOVIMIENTOS</p>
+          <h3 id="transactions-month-title">Mes actual</h3>
+          <p class="muted no-margin">Registra cada gasto y se actualizarán tus totales automáticamente.</p>
+        </div>
+      </div>
+
+      <form id="transaction-form" class="movement-form">
+        <label>Fecha
+          <input id="transaction-date" type="date" required>
+        </label>
+        <label>Descripción
+          <input id="transaction-description" type="text" maxlength="120" placeholder="Ej. Supermercado" required>
+        </label>
+        <label>Categoría
+          <select id="transaction-category" required></select>
+        </label>
+        <label>Valor
+          <div class="money-input">
+            <span>$</span>
+            <input id="transaction-amount" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="0.00" required>
+          </div>
+        </label>
+        <button class="primary" type="submit">Registrar gasto</button>
+      </form>
+
+      <div class="movement-list-head">
+        <div>
+          <p class="eyebrow">REGISTROS DEL MES</p>
+          <h3>Gastos</h3>
+        </div>
+        <strong id="transactions-total">$0,00</strong>
+      </div>
+
+      <div id="transactions-empty" class="empty-state">Todavía no hay movimientos registrados este mes.</div>
+      <div id="transactions-list" class="transactions-list"></div>
+    </section>
+  </section>
+
   <section id="configure-view" class="hidden">
     <section class="panel config-panel">
       <div class="panel-heading">
