@@ -90,10 +90,25 @@ loginForm.addEventListener('submit',async(e)=>{
   const password=document.querySelector('#login-password').value;
   const b=loginForm.querySelector('button[type="submit"]');
   b.disabled=true; b.textContent='Ingresando…';
-  const {error}=await supabase.auth.signInWithPassword({email,password});
+  const {data,error}=await supabase.auth.signInWithPassword({email,password});
   b.disabled=false; b.textContent='Ingresar';
   if(error){showMessage('No pudimos iniciar sesión. Revisa el correo y la contraseña.','error');return;}
-  await renderSession();
+
+  if(data?.session?.user){
+    currentUser=data.session.user;
+    authView.classList.add('hidden');
+    dashboardView.classList.remove('hidden');
+    setView('home');
+  }
+
+  try{
+    await renderSession();
+  }catch(err){
+    console.error(err);
+    authView.classList.add('hidden');
+    dashboardView.classList.remove('hidden');
+    showMessage('Ingresaste correctamente. Hubo un problema al refrescar una parte de los datos.','error','app');
+  }
 });
 
 registerForm.addEventListener('submit',async(e)=>{
