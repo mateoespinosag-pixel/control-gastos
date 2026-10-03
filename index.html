@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#f4f6f8">
 <title>Control de gastos</title>
-<link rel="stylesheet" href="./styles.css?v=20261003-0117">
+<link rel="stylesheet" href="./styles.css?v=20261003-comparativas">
 </head>
 <body>
 <main id="app">
@@ -49,7 +49,7 @@
   <nav class="nav-tabs" aria-label="Navegación principal">
     <button class="nav-tab active" data-view="home" type="button">Inicio</button>
     <button class="nav-tab" data-view="transactions" type="button">Movimientos</button>
-    <button class="nav-tab" type="button" disabled>Comparativas</button>
+    <button class="nav-tab" data-view="comparisons" type="button">Comparativas</button>
     <button class="nav-tab" data-view="configure" type="button">Configurar mes</button>
   </nav>
 
@@ -123,6 +123,67 @@
     </section>
   </section>
 
+
+  <section id="comparisons-view" class="hidden">
+    <section class="panel comparisons-panel">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">COMPARATIVAS</p>
+          <h3>Histórico mensual</h3>
+          <p class="muted no-margin">Los promedios incluyen únicamente meses anteriores al mes actual.</p>
+        </div>
+      </div>
+
+      <section class="current-snapshot">
+        <div>
+          <p class="eyebrow">MES EN CURSO · NO INCLUIDO EN PROMEDIOS</p>
+          <h3 id="comparison-current-month">Octubre 2026</h3>
+        </div>
+        <div class="snapshot-values">
+          <div><span>Ingreso</span><strong id="comparison-current-income">$0,00</strong></div>
+          <div><span>Gastado</span><strong id="comparison-current-spent">$0,00</strong></div>
+          <div><span>Ahorro actual</span><strong id="comparison-current-savings">$0,00</strong></div>
+        </div>
+      </section>
+
+      <section class="comparison-kpis">
+        <article><span>Meses históricos</span><strong id="history-month-count">0</strong></article>
+        <article><span>Gasto promedio</span><strong id="history-average-spent">$0,00</strong></article>
+        <article><span>Ahorro promedio</span><strong id="history-average-savings">$0,00</strong></article>
+        <article><span>Ahorro promedio %</span><strong id="history-average-rate">0%</strong></article>
+      </section>
+
+      <div class="comparison-grid">
+        <section class="comparison-block">
+          <div class="comparison-block-head">
+            <div><p class="eyebrow">EVOLUCIÓN</p><h3>Ingreso, gasto y ahorro</h3></div>
+          </div>
+          <div id="history-bars" class="history-bars"></div>
+        </section>
+
+        <section class="comparison-block">
+          <div class="comparison-block-head category-head">
+            <div><p class="eyebrow">POR CATEGORÍA</p><h3>Comportamiento histórico</h3></div>
+            <select id="comparison-category"></select>
+          </div>
+          <div id="category-history" class="category-history"></div>
+        </section>
+      </div>
+
+      <section class="comparison-block history-table-block">
+        <div class="comparison-block-head">
+          <div><p class="eyebrow">DETALLE</p><h3>Mes a mes</h3></div>
+        </div>
+        <div class="history-table-wrap">
+          <table class="history-table">
+            <thead><tr><th>Mes</th><th>Ingreso</th><th>Gasto</th><th>Ahorro</th><th>Ahorro %</th></tr></thead>
+            <tbody id="history-table-body"></tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+  </section>
+
   <section id="configure-view" class="hidden">
     <section class="panel config-panel">
       <div class="panel-heading">
@@ -160,6 +221,6 @@
   </section>
 </section>
 </main>
-<script type="module" src="./app.js?v=20261003-0117"></script>
+<script type="module" src="./app.js?v=20261003-comparativas"></script>
 </body>
 </html>
