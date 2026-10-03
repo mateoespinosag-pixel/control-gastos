@@ -49,3 +49,27 @@ select:focus{border-color:#a7bbb4;box-shadow:0 0 0 4px rgba(31,111,89,.08)}
 .negative{color:var(--danger)}
 @media(max-width:900px){.comparison-grid{grid-template-columns:1fr}.comparison-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.current-snapshot{align-items:flex-start;flex-direction:column}.snapshot-values{width:100%}}
 @media(max-width:600px){.comparison-kpis,.snapshot-values{grid-template-columns:1fr}.category-head{align-items:flex-start;flex-direction:column}.category-head select{max-width:none;width:100%}.history-bar-row,.category-history-row{grid-template-columns:74px 1fr}.history-bar-value,.category-value{grid-column:2;text-align:left}}
+
+.category-manager{margin-top:28px;padding-top:24px;border-top:1px solid var(--line)}
+.category-manager-head{display:flex;justify-content:space-between;align-items:center;gap:18px}
+.compact-secondary{padding:10px 13px;width:auto}
+.new-category-form{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:end;margin:20px 0 14px}
+.new-category-form .primary{height:46px;margin:0}
+.category-manager-list{display:grid;gap:9px}
+.category-manager-row{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;background:var(--surface-soft);border:1px solid var(--line);border-radius:15px;padding:10px}
+.category-name-input{padding:10px 12px}
+.category-actions{display:flex;gap:6px}
+.small-button{border:1px solid var(--line);background:var(--surface);border-radius:10px;min-width:36px;height:36px;padding:0 10px;font-weight:800;color:var(--text)}
+.small-button:disabled{opacity:.35;cursor:default}
+.status-button{border:0;border-radius:999px;padding:8px 11px;font-size:12px;font-weight:800}
+.status-button.active{background:var(--success-bg);color:var(--accent-dark)}
+.status-button.inactive{background:#f1f3f5;color:var(--muted)}
+.category-manager-note{font-size:12px;color:var(--muted)}
+@media(max-width:700px){
+  .category-manager-head{align-items:flex-start;flex-direction:column}
+  .compact-secondary{width:100%}
+  .new-category-form{grid-template-columns:1fr}
+  .category-manager-row{grid-template-columns:1fr}
+  .category-actions{justify-content:flex-start}
+  .status-button{width:100%}
+}
