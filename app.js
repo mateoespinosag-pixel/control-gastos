@@ -18,6 +18,7 @@ const forgotPasswordButton=document.querySelector('#forgot-password');
 const homeView=document.querySelector('#home-view');
 const configureView=document.querySelector('#configure-view');
 const transactionsView=document.querySelector('#transactions-view');
+const comparisonsView=document.querySelector('#comparisons-view');
 const transactionForm=document.querySelector('#transaction-form');
 const incomeInput=document.querySelector('#monthly-income');
 
@@ -27,6 +28,9 @@ let monthlyBudgets={};
 let baseBudgets={};
 let activePeriod=null;
 let transactions=[];
+let historicalPeriods=[];
+let allTransactions=[];
+let allMonthlyBudgets=[];
 
 function money(value){
   return new Intl.NumberFormat('es-EC',{style:'currency',currency:'USD',minimumFractionDigits:2}).format(Number(value||0));
@@ -74,6 +78,7 @@ function setView(view){
   homeView.classList.toggle('hidden',view!=='home');
   configureView.classList.toggle('hidden',view!=='configure');
   transactionsView.classList.toggle('hidden',view!=='transactions');
+  comparisonsView.classList.toggle('hidden',view!=='comparisons');
   document.querySelectorAll('.nav-tab[data-view]').forEach(btn=>{
     btn.classList.toggle('active',btn.dataset.view===view);
   });
@@ -432,6 +437,135 @@ async function deleteTransaction(id){
   showMessage('Movimiento eliminado.','success','app');
 }
 
+async function loadHistoricalData(){
+  const currentMonth=monthDateString();
+  const [{data:periods,error:periodError},{data:tx,error:txError},{data:budgets,error:budgetError}]=await Promise.all([
+    supabase.from('monthly_periods').select('id,income,month_date').lt('month_date',currentMonth).order('month_date',{ascending:true}),
+    supabase.from('transactions').select('monthly_period_id,category_id,amount,transaction_date'),
+    supabase.from('monthly_budgets').select('monthly_period_id,category_id,budget_amount')
+  ]);
+  if(periodError)throw periodError;
+  if(txError)throw txError;
+  if(budgetError)throw budgetError;
+  historicalPeriods=periods??[];
+  allTransactions=tx??[];
+  allMonthlyBudgets=budgets??[];
+}
+
+function monthLabelFromDateString(dateString){
+  const d=new Date(dateString+'T12:00:00');
+  const value=new Intl.DateTimeFormat('es-EC',{month:'short',year:'numeric'}).format(d);
+  return value.charAt(0).toUpperCase()+value.slice(1);
+}
+
+function historicalRows(){
+  const totals={};
+  for(const p of historicalPeriods)totals[p.id]=0;
+  for(const t of allTransactions){
+    if(Object.prototype.hasOwnProperty.call(totals,t.monthly_period_id)){
+      totals[t.monthly_period_id]+=Number(t.amount||0);
+    }
+  }
+  return historicalPeriods.map(p=>{
+    const income=Number(p.income||0);
+    const spent=Number(totals[p.id]||0);
+    const savings=income-spent;
+    return {...p,income,spent,savings,rate:income>0?savings/income*100:0};
+  });
+}
+
+function renderComparisons(){
+  const rows=historicalRows();
+  const currentIncome=Number(activePeriod?.income||0);
+  const currentSpent=transactions.reduce((s,t)=>s+Number(t.amount||0),0);
+  const currentSavings=currentIncome-currentSpent;
+
+  document.querySelector('#comparison-current-month').textContent=monthLabel();
+  document.querySelector('#comparison-current-income').textContent=money(currentIncome);
+  document.querySelector('#comparison-current-spent').textContent=money(currentSpent);
+  document.querySelector('#comparison-current-savings').textContent=money(currentSavings);
+
+  const count=rows.length;
+  const avgSpent=count?rows.reduce((s,r)=>s+r.spent,0)/count:0;
+  const avgSavings=count?rows.reduce((s,r)=>s+r.savings,0)/count:0;
+  const avgRate=count?rows.reduce((s,r)=>s+r.rate,0)/count:0;
+  document.querySelector('#history-month-count').textContent=count;
+  document.querySelector('#history-average-spent').textContent=money(avgSpent);
+  document.querySelector('#history-average-savings').textContent=money(avgSavings);
+  document.querySelector('#history-average-rate').textContent=`${avgRate.toFixed(1)}%`;
+
+  const bars=document.querySelector('#history-bars');
+  bars.innerHTML='';
+  const recent=rows.slice(-12);
+  const maxSpent=Math.max(1,...recent.map(r=>r.spent));
+  for(const r of recent){
+    const row=document.createElement('div');
+    row.className='history-bar-row';
+    row.innerHTML='<span class="history-bar-label"></span><div class="history-bar-track"><span></span></div><span class="history-bar-value"></span>';
+    row.querySelector('.history-bar-label').textContent=monthLabelFromDateString(r.month_date);
+    row.querySelector('.history-bar-track span').style.width=`${Math.max(2,r.spent/maxSpent*100)}%`;
+    row.querySelector('.history-bar-value').textContent=money(r.spent);
+    bars.appendChild(row);
+  }
+
+  const tbody=document.querySelector('#history-table-body');
+  tbody.innerHTML='';
+  for(const r of [...rows].reverse()){
+    const tr=document.createElement('tr');
+    tr.innerHTML='<td></td><td></td><td></td><td></td><td></td>';
+    const tds=tr.querySelectorAll('td');
+    tds[0].textContent=monthLabelFromDateString(r.month_date);
+    tds[1].textContent=money(r.income);
+    tds[2].textContent=money(r.spent);
+    tds[3].textContent=money(r.savings);
+    tds[3].className=r.savings>=0?'positive':'negative';
+    tds[4].textContent=`${r.rate.toFixed(1)}%`;
+    tds[4].className=r.rate>=0?'positive':'negative';
+    tbody.appendChild(tr);
+  }
+
+  const select=document.querySelector('#comparison-category');
+  const selected=select.value;
+  select.innerHTML='';
+  for(const cat of categories){
+    const option=document.createElement('option');
+    option.value=cat.id;
+    option.textContent=cat.name;
+    select.appendChild(option);
+  }
+  if(selected && categories.some(c=>c.id===selected))select.value=selected;
+  renderCategoryHistory(select.value || categories[0]?.id);
+}
+
+function renderCategoryHistory(categoryId){
+  const box=document.querySelector('#category-history');
+  box.innerHTML='';
+  if(!categoryId)return;
+  const rows=historicalRows().slice(-12);
+  const budgetMap={};
+  for(const b of allMonthlyBudgets){
+    if(b.category_id===categoryId)budgetMap[b.monthly_period_id]=Number(b.budget_amount||0);
+  }
+  const spentMap={};
+  for(const t of allTransactions){
+    if(t.category_id===categoryId)spentMap[t.monthly_period_id]=(spentMap[t.monthly_period_id]||0)+Number(t.amount||0);
+  }
+  const maxValue=Math.max(1,...rows.flatMap(r=>[spentMap[r.id]||0,budgetMap[r.id]||0]));
+  for(const r of rows){
+    const spent=Number(spentMap[r.id]||0);
+    const budget=Number(budgetMap[r.id]||0);
+    const item=document.createElement('div');
+    item.className='category-history-row';
+    item.innerHTML='<span class="category-month"></span><div class="category-track"><span></span></div><span class="category-value"></span>';
+    item.querySelector('.category-month').textContent=monthLabelFromDateString(r.month_date);
+    item.querySelector('.category-track span').style.width=`${Math.max(2,spent/maxValue*100)}%`;
+    item.querySelector('.category-value').textContent=`${money(spent)} / ${money(budget)}`;
+    box.appendChild(item);
+  }
+}
+
+document.querySelector('#comparison-category').addEventListener('change',(e)=>renderCategoryHistory(e.target.value));
+
 async function refreshAppData(){
   const [loadedCategories,loadedBase,period]=await Promise.all([
     loadCategories(),loadBaseBudgets(),loadCurrentPeriod()
@@ -441,10 +575,12 @@ async function refreshAppData(){
   activePeriod=period;
   monthlyBudgets=await loadMonthlyBudgets(period?.id);
   transactions=await loadTransactions(period?.id);
+  await loadHistoricalData();
   renderHome();
   renderBudgetRows();
   renderTransactionForm();
   renderTransactions();
+  renderComparisons();
 }
 
 async function renderSession(){
