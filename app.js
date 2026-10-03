@@ -748,6 +748,7 @@ async function refreshAppData(){
   renderTransactionForm();
   renderTransactions();
   renderComparisons();
+  renderCategoryManager();
 }
 
 async function renderSession(){
