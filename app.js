@@ -24,6 +24,7 @@ const incomeInput=document.querySelector('#monthly-income');
 
 let currentUser=null;
 let categories=[];
+let allCategories=[];
 let monthlyBudgets={};
 let baseBudgets={};
 let activePeriod=null;
@@ -155,7 +156,6 @@ async function loadProfile(userId){
 async function loadCategories(){
   const {data,error}=await supabase.from('categories')
     .select('id,name,sort_order,is_active')
-    .eq('is_active',true)
     .order('sort_order',{ascending:true});
   if(error)throw error;
   return data??[];
@@ -386,7 +386,7 @@ function renderTransactions(){
   list.innerHTML='';
   empty.classList.toggle('hidden',transactions.length>0);
   for(const t of transactions){
-    const category=categories.find(c=>c.id===t.category_id);
+    const category=allCategories.find(c=>c.id===t.category_id);
     const row=document.createElement('div');
     row.className='transaction-row';
     row.innerHTML='<span class="transaction-date"></span><span class="transaction-description"></span><span class="transaction-category"></span><span class="transaction-amount"></span><button class="icon-button" type="button" aria-label="Eliminar">×</button>';
@@ -527,14 +527,14 @@ function renderComparisons(){
   const select=document.querySelector('#comparison-category');
   const selected=select.value;
   select.innerHTML='';
-  for(const cat of categories){
+  for(const cat of allCategories){
     const option=document.createElement('option');
     option.value=cat.id;
     option.textContent=cat.name;
     select.appendChild(option);
   }
-  if(selected && categories.some(c=>c.id===selected))select.value=selected;
-  renderCategoryHistory(select.value || categories[0]?.id);
+  if(selected && allCategories.some(c=>c.id===selected))select.value=selected;
+  renderCategoryHistory(select.value || allCategories[0]?.id);
 }
 
 function renderCategoryHistory(categoryId){
@@ -566,11 +566,178 @@ function renderCategoryHistory(categoryId){
 
 document.querySelector('#comparison-category').addEventListener('change',(e)=>renderCategoryHistory(e.target.value));
 
+
+function renderCategoryManager(){
+  const list=document.querySelector('#category-manager-list');
+  if(!list)return;
+  list.innerHTML='';
+
+  allCategories.forEach((cat,index)=>{
+    const row=document.createElement('div');
+    row.className='category-manager-row';
+    row.dataset.categoryId=cat.id;
+    row.innerHTML=`
+      <input class="category-name-input" type="text" maxlength="60">
+      <div class="category-actions">
+        <button class="small-button move-up" type="button" title="Subir">↑</button>
+        <button class="small-button move-down" type="button" title="Bajar">↓</button>
+        <button class="small-button save-name" type="button">Guardar</button>
+      </div>
+      <button class="status-button" type="button"></button>
+    `;
+
+    const nameInput=row.querySelector('.category-name-input');
+    nameInput.value=cat.name;
+
+    const up=row.querySelector('.move-up');
+    const down=row.querySelector('.move-down');
+    up.disabled=index===0;
+    down.disabled=index===allCategories.length-1;
+    up.addEventListener('click',()=>moveCategory(cat.id,-1));
+    down.addEventListener('click',()=>moveCategory(cat.id,1));
+
+    row.querySelector('.save-name').addEventListener('click',()=>renameCategory(cat.id,nameInput.value));
+
+    const status=row.querySelector('.status-button');
+    status.textContent=cat.is_active?'Activa':'Inactiva';
+    status.className=`status-button ${cat.is_active?'active':'inactive'}`;
+    status.addEventListener('click',()=>toggleCategory(cat.id,!cat.is_active));
+
+    list.appendChild(row);
+  });
+}
+
+async function refreshCategoriesOnly(){
+  const loaded=await loadCategories();
+  allCategories=loaded;
+  categories=loaded.filter(c=>c.is_active);
+  baseBudgets=await loadBaseBudgets();
+  monthlyBudgets=await loadMonthlyBudgets(activePeriod?.id);
+  await loadHistoricalData();
+  renderHome();
+  renderBudgetRows();
+  renderTransactionForm();
+  renderTransactions();
+  renderComparisons();
+  renderCategoryManager();
+  renderCategoryManager();
+}
+
+async function renameCategory(categoryId,newName){
+  clearMessage('app');
+  const clean=(newName||'').trim();
+  if(!clean){showMessage('El nombre de la categoría no puede quedar vacío.','error','app');return;}
+
+  const duplicate=allCategories.some(c=>c.id!==categoryId && c.name.toLowerCase()===clean.toLowerCase());
+  if(duplicate){showMessage('Ya existe una categoría con ese nombre.','error','app');return;}
+
+  const {error}=await supabase.from('categories').update({name:clean}).eq('id',categoryId);
+  if(error){showMessage('No pudimos renombrar la categoría.','error','app');return;}
+
+  await refreshCategoriesOnly();
+  showMessage('Categoría renombrada. El historial se mantiene asociado.','success','app');
+}
+
+async function toggleCategory(categoryId,nextActive){
+  clearMessage('app');
+  const activeCount=allCategories.filter(c=>c.is_active).length;
+  if(!nextActive && activeCount<=1){showMessage('Debes mantener al menos una categoría activa.','error','app');return;}
+
+  const {error}=await supabase.from('categories').update({is_active:nextActive}).eq('id',categoryId);
+  if(error){showMessage('No pudimos cambiar el estado de la categoría.','error','app');return;}
+
+  await refreshCategoriesOnly();
+  showMessage(nextActive?'Categoría activada.':'Categoría desactivada. Su historial sigue disponible.','success','app');
+}
+
+async function moveCategory(categoryId,direction){
+  const index=allCategories.findIndex(c=>c.id===categoryId);
+  const otherIndex=index+direction;
+  if(index<0 || otherIndex<0 || otherIndex>=allCategories.length)return;
+
+  const current=allCategories[index];
+  const other=allCategories[otherIndex];
+  const currentOrder=current.sort_order;
+  const otherOrder=other.sort_order;
+
+  const {error:firstError}=await supabase.from('categories').update({sort_order:otherOrder}).eq('id',current.id);
+  if(firstError){showMessage('No pudimos cambiar el orden.','error','app');return;}
+
+  const {error:secondError}=await supabase.from('categories').update({sort_order:currentOrder}).eq('id',other.id);
+  if(secondError){
+    await supabase.from('categories').update({sort_order:currentOrder}).eq('id',current.id);
+    showMessage('No pudimos completar el cambio de orden.','error','app');
+    return;
+  }
+
+  await refreshCategoriesOnly();
+}
+
+document.querySelector('#toggle-category-manager').addEventListener('click',()=>{
+  const body=document.querySelector('#category-manager-body');
+  const button=document.querySelector('#toggle-category-manager');
+  const willOpen=body.classList.contains('hidden');
+  body.classList.toggle('hidden',!willOpen);
+  button.textContent=willOpen?'Cerrar administrador':'Administrar categorías';
+});
+
+document.querySelector('#new-category-form').addEventListener('submit',async(e)=>{
+  e.preventDefault();
+  clearMessage('app');
+  const input=document.querySelector('#new-category-name');
+  const name=input.value.trim();
+  if(!name)return;
+
+  if(allCategories.some(c=>c.name.toLowerCase()===name.toLowerCase())){
+    showMessage('Ya existe una categoría con ese nombre.','error','app');
+    return;
+  }
+
+  const nextOrder=(Math.max(0,...allCategories.map(c=>Number(c.sort_order)||0)))+1;
+  const {data:newCategory,error}=await supabase.from('categories')
+    .insert({user_id:currentUser.id,name,sort_order:nextOrder,is_active:true})
+    .select('id,name,sort_order,is_active')
+    .single();
+
+  if(error){showMessage('No pudimos crear la categoría.','error','app');return;}
+
+  const {error:baseError}=await supabase.from('base_budgets').insert({
+    user_id:currentUser.id,
+    category_id:newCategory.id,
+    budget_amount:0
+  });
+
+  if(baseError){
+    await supabase.from('categories').delete().eq('id',newCategory.id);
+    showMessage('No pudimos completar la creación de la categoría.','error','app');
+    return;
+  }
+
+  if(activePeriod){
+    const {error:monthError}=await supabase.from('monthly_budgets').insert({
+      user_id:currentUser.id,
+      monthly_period_id:activePeriod.id,
+      category_id:newCategory.id,
+      budget_amount:0
+    });
+    if(monthError){
+      showMessage('La categoría se creó, pero no pudimos añadirla al presupuesto de este mes.','error','app');
+      await refreshCategoriesOnly();
+      return;
+    }
+  }
+
+  input.value='';
+  await refreshCategoriesOnly();
+  showMessage('Nueva categoría creada. Puedes asignarle presupuesto este mes.','success','app');
+});
+
 async function refreshAppData(){
   const [loadedCategories,loadedBase,period]=await Promise.all([
     loadCategories(),loadBaseBudgets(),loadCurrentPeriod()
   ]);
-  categories=loadedCategories;
+  allCategories=loadedCategories;
+  categories=loadedCategories.filter(c=>c.is_active);
   baseBudgets=loadedBase;
   activePeriod=period;
   monthlyBudgets=await loadMonthlyBudgets(period?.id);
