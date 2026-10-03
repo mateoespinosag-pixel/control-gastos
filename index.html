@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#f4f6f8">
 <title>Control de gastos</title>
-<link rel="stylesheet" href="./styles.css?v=20261003-comparativas">
+<link rel="stylesheet" href="./styles.css?v=20261003-categorias">
 </head>
 <body>
 <main id="app">
@@ -217,10 +217,31 @@
         <button id="save-month" class="secondary" type="button">Guardar solo este mes</button>
         <button id="save-base" class="primary" type="button">Guardar como nueva base</button>
       </div>
+
+      <section class="category-manager">
+        <div class="category-manager-head">
+          <div>
+            <p class="eyebrow">CATEGORÍAS</p>
+            <h3>Administrar categorías</h3>
+            <p class="muted no-margin">Renombra, crea, reordena o desactiva categorías. El historial anterior se conserva.</p>
+          </div>
+          <button id="toggle-category-manager" class="secondary compact-secondary" type="button">Administrar categorías</button>
+        </div>
+
+        <div id="category-manager-body" class="hidden">
+          <form id="new-category-form" class="new-category-form">
+            <label>Nueva categoría
+              <input id="new-category-name" type="text" maxlength="60" placeholder="Ej. Mascotas" required>
+            </label>
+            <button class="primary" type="submit">Agregar categoría</button>
+          </form>
+          <div id="category-manager-list" class="category-manager-list"></div>
+        </div>
+      </section>
     </section>
   </section>
 </section>
 </main>
-<script type="module" src="./app.js?v=20261003-comparativas"></script>
+<script type="module" src="./app.js?v=20261003-categorias"></script>
 </body>
 </html>
