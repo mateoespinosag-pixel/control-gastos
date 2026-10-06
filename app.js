@@ -878,3 +878,9 @@ async function renderSession(){
 
 supabase.auth.onAuthStateChange(()=>queueMicrotask(renderSession));
 await renderSession();
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('./sw.js').catch(error=>console.warn('Service worker no disponible',error));
+  });
+}
