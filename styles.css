@@ -83,3 +83,9 @@ select:focus{border-color:#a7bbb4;box-shadow:0 0 0 4px rgba(31,111,89,.08)}
   .money-input input{padding-left:40px!important}
   .budget-row .money-input input{padding-left:42px!important}
 }
+
+.month-switcher{display:flex;justify-content:space-between;align-items:center;gap:16px;background:var(--surface-soft);border:1px solid var(--line);border-radius:17px;padding:14px 16px;margin:4px 0 20px}
+.month-switcher-label{display:block;color:var(--muted);font-size:12px;margin-bottom:4px}
+.month-switcher strong{font-size:18px}
+.month-switcher-actions{display:flex;gap:8px;flex-wrap:wrap}
+@media(max-width:700px){.month-switcher{align-items:flex-start;flex-direction:column}.month-switcher-actions{width:100%}.month-switcher-actions button{width:100%}}
