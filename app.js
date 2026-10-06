@@ -229,12 +229,33 @@ function renderHome(){
     const remaining=budget-spent;
     const pct=budget>0 ? spent/budget*100 : 0;
     const item=document.createElement('article');
-    item.className='category-card'+(spent>budget&&budget>0?' over':'');
-    item.innerHTML=`<strong></strong><b></b><span class="category-status"></span><div class="category-progress"><span></span></div>`;
+    const level=budget<=0 ? (spent>0?'danger':'unassigned') : pct>=90?'danger':pct>=70?'warning':'healthy';
+    item.className=`category-card level-${level}`;
+    item.innerHTML='<div class="category-top"><strong></strong><span class="category-chip"></span></div><b></b><span class="category-status"></span><div class="category-progress" role="progressbar" aria-valuemin="0"><span></span></div>';
     item.querySelector('strong').textContent=c.name;
     item.querySelector('b').textContent=`${money(spent)} / ${money(budget)}`;
-    item.querySelector('.category-status').textContent=remaining>=0?`Disponible: ${money(remaining)}`:`Excedido: ${money(Math.abs(remaining))}`;
-    item.querySelector('.category-progress span').style.width=`${Math.min(pct,100)}%`;
+    const chip=item.querySelector('.category-chip');
+    const status=item.querySelector('.category-status');
+    if(budget<=0){
+      chip.textContent=spent>0?'Sin presupuesto':'Sin asignar';
+      status.textContent=spent>0?`Gastado sin presupuesto: ${money(spent)}`:'Asigna un presupuesto';
+    }else if(spent>budget){
+      chip.textContent='Excedido';
+      status.textContent=`Excedido por ${money(spent-budget)}`;
+    }else if(pct>=90){
+      chip.textContent='Al límite';
+      status.textContent=`Solo quedan ${money(remaining)}`;
+    }else if(pct>=70){
+      chip.textContent='Atención';
+      status.textContent=`Disponible: ${money(remaining)}`;
+    }else{
+      chip.textContent='En orden';
+      status.textContent=`Disponible: ${money(remaining)}`;
+    }
+    const progress=item.querySelector('.category-progress');
+    progress.setAttribute('aria-valuenow',String(Math.max(0,Math.round(pct))));
+    progress.setAttribute('aria-label',`${c.name}: ${Math.round(pct)}% consumido`);
+    progress.querySelector('span').style.width=`${Math.max(0,Math.min(pct,100))}%`;
     grid.appendChild(item);
   }
 }
