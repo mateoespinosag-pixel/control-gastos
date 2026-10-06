@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#f4f6f8">
 <title>Control de gastos</title>
-<link rel="stylesheet" href="./styles.css?v=20261003-dollarfix">
+<link rel="stylesheet" href="./styles.css?v=20261006-nuevomes">
 </head>
 <body>
 <main id="app">
@@ -194,6 +194,17 @@
         </div>
       </div>
 
+      <div class="month-switcher">
+        <div>
+          <span class="month-switcher-label">Mes seleccionado</span>
+          <strong id="selected-month-label">Mes actual</strong>
+        </div>
+        <div class="month-switcher-actions">
+          <button id="return-current-month" class="secondary compact-secondary" type="button">Volver al mes actual</button>
+          <button id="create-next-month" class="primary compact" type="button">Crear siguiente mes</button>
+        </div>
+      </div>
+
       <div class="income-block">
         <label>Ingreso mensual
           <div class="money-input"><span>$</span><input id="monthly-income" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></div>
@@ -242,6 +253,6 @@
   </section>
 </section>
 </main>
-<script type="module" src="./app.js?v=20261003-categorias"></script>
+<script type="module" src="./app.js?v=20261006-nuevomes"></script>
 </body>
 </html>
