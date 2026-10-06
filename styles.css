@@ -386,3 +386,13 @@ input:focus,select:focus{border-color:#80baff;box-shadow:0 0 0 4px rgba(0,122,25
   .summary-icon{width:31px;height:31px;border-radius:10px;font-size:16px;margin-bottom:11px}
   .category-icon{width:32px;height:32px;border-radius:10px;font-size:16px}
 }
+
+/* iOS-style motion */
+.nav-tab{transition:background-color .2s ease,color .2s ease,transform .16s ease,box-shadow .2s ease}
+.nav-tab:active{transform:scale(.97)}
+.primary,.secondary,.icon-button,.small-button,.status-button{transition:transform .16s ease,background-color .2s ease,border-color .2s ease,box-shadow .2s ease}
+.primary:active,.secondary:active,.icon-button:active,.small-button:active,.status-button:active{transform:scale(.975)}
+.category-card,.summary-card,.panel,.hero-card,.transaction-row,.budget-row{will-change:transform,opacity}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}
