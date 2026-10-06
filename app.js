@@ -32,6 +32,8 @@ let transactions=[];
 let historicalPeriods=[];
 let allTransactions=[];
 let allMonthlyBudgets=[];
+let selectedMonthDate=monthDateString();
+let comparisonCurrentPeriod=null;
 
 function money(value){
   return new Intl.NumberFormat('es-EC',{style:'currency',currency:'USD',minimumFractionDigits:2}).format(Number(value||0));
@@ -167,11 +169,10 @@ async function loadBaseBudgets(){
   return Object.fromEntries((data??[]).map(x=>[x.category_id,Number(x.budget_amount)]));
 }
 
-async function loadCurrentPeriod(){
-  const date=monthDateString();
+async function loadPeriod(monthDate=selectedMonthDate){
   const {data,error}=await supabase.from('monthly_periods')
     .select('id,income,month_date')
-    .eq('month_date',date)
+    .eq('month_date',monthDate)
     .maybeSingle();
   if(error)throw error;
   return data;
@@ -203,9 +204,9 @@ function renderHome(){
   const available=income-spentTotal;
   const savingsRate=income>0 ? (available/income*100) : 0;
 
-  document.querySelector('#current-month-title').textContent=monthLabel();
-  document.querySelector('#configure-month-title').textContent=monthLabel();
-  document.querySelector('#transactions-month-title').textContent=monthLabel();
+  document.querySelector('#current-month-title').textContent=monthLabel(new Date(selectedMonthDate+'T12:00:00'));
+  document.querySelector('#configure-month-title').textContent=monthLabel(new Date(selectedMonthDate+'T12:00:00'));
+  document.querySelector('#transactions-month-title').textContent=monthLabel(new Date(selectedMonthDate+'T12:00:00'));
   document.querySelector('#summary-income').textContent=money(income);
   document.querySelector('#summary-spent').textContent=money(spentTotal);
   document.querySelector('#summary-available').textContent=money(available);
@@ -317,7 +318,7 @@ async function saveConfiguration(saveAsBase=false){
   if(income<=0){showMessage('Ingresa un ingreso mensual mayor a 0.','error','app');return;}
 
   const budgetMap=collectBudgets();
-  const monthDate=monthDateString();
+  const monthDate=selectedMonthDate;
 
   const {data:period,error:periodError}=await supabase.from('monthly_periods')
     .upsert({
@@ -375,7 +376,11 @@ function renderTransactionForm(){
     select.appendChild(option);
   }
   const today=new Date();
-  document.querySelector('#transaction-date').value=today.toISOString().slice(0,10);
+  const isCurrentMonth=selectedMonthDate===monthDateString();
+  document.querySelector('#transaction-date').value=isCurrentMonth?today.toISOString().slice(0,10):selectedMonthDate;
+  const submitButton=transactionForm.querySelector('button[type="submit"]');
+  submitButton.disabled=!isCurrentMonth;
+  submitButton.textContent=isCurrentMonth?'Registrar gasto':'Solo mes actual';
 }
 
 function renderTransactions(){
@@ -401,13 +406,14 @@ function renderTransactions(){
 
 transactionForm.addEventListener('submit',async(e)=>{
   e.preventDefault(); clearMessage('app');
+  if(selectedMonthDate!==monthDateString()){showMessage('Los movimientos solo se registran en el mes calendario actual. Vuelve al mes actual para ingresar gastos.','error','app');return;}
   if(!activePeriod){showMessage('Primero configura el mes actual.','error','app');setView('configure');return;}
   const transactionDate=document.querySelector('#transaction-date').value;
   const description=document.querySelector('#transaction-description').value.trim();
   const categoryId=document.querySelector('#transaction-category').value;
   const amount=Number(document.querySelector('#transaction-amount').value||0);
   if(!transactionDate||!description||!categoryId||amount<=0){showMessage('Completa todos los campos del gasto.','error','app');return;}
-  if(transactionDate.slice(0,7)!==monthDateString().slice(0,7)){showMessage('La fecha debe pertenecer al mes actual.','error','app');return;}
+  if(transactionDate.slice(0,7)!==selectedMonthDate.slice(0,7)){showMessage('La fecha debe pertenecer al mes seleccionado.','error','app');return;}
   const button=transactionForm.querySelector('button[type="submit"]');
   button.disabled=true; button.textContent='Guardando…';
   const {data,error}=await supabase.from('transactions').insert({
@@ -439,17 +445,20 @@ async function deleteTransaction(id){
 
 async function loadHistoricalData(){
   const currentMonth=monthDateString();
-  const [{data:periods,error:periodError},{data:tx,error:txError},{data:budgets,error:budgetError}]=await Promise.all([
+  const [{data:periods,error:periodError},{data:tx,error:txError},{data:budgets,error:budgetError},{data:currentPeriod,error:currentError}]=await Promise.all([
     supabase.from('monthly_periods').select('id,income,month_date').lt('month_date',currentMonth).order('month_date',{ascending:true}),
     supabase.from('transactions').select('monthly_period_id,category_id,amount,transaction_date'),
-    supabase.from('monthly_budgets').select('monthly_period_id,category_id,budget_amount')
+    supabase.from('monthly_budgets').select('monthly_period_id,category_id,budget_amount'),
+    supabase.from('monthly_periods').select('id,income,month_date').eq('month_date',currentMonth).maybeSingle()
   ]);
   if(periodError)throw periodError;
   if(txError)throw txError;
   if(budgetError)throw budgetError;
+  if(currentError)throw currentError;
   historicalPeriods=periods??[];
   allTransactions=tx??[];
   allMonthlyBudgets=budgets??[];
+  comparisonCurrentPeriod=currentPeriod;
 }
 
 function monthLabelFromDateString(dateString){
@@ -476,8 +485,10 @@ function historicalRows(){
 
 function renderComparisons(){
   const rows=historicalRows();
-  const currentIncome=Number(activePeriod?.income||0);
-  const currentSpent=transactions.reduce((s,t)=>s+Number(t.amount||0),0);
+  const currentIncome=Number(comparisonCurrentPeriod?.income||0);
+  const currentSpent=comparisonCurrentPeriod
+    ? allTransactions.filter(t=>t.monthly_period_id===comparisonCurrentPeriod.id).reduce((s,t)=>s+Number(t.amount||0),0)
+    : 0;
   const currentSavings=currentIncome-currentSpent;
 
   document.querySelector('#comparison-current-month').textContent=monthLabel();
@@ -732,9 +743,100 @@ document.querySelector('#new-category-form').addEventListener('submit',async(e)=
   showMessage('Nueva categoría creada. Puedes asignarle presupuesto este mes.','success','app');
 });
 
+async function selectMonth(monthDate){
+  selectedMonthDate=monthDate;
+  activePeriod=await loadPeriod(monthDate);
+  monthlyBudgets=await loadMonthlyBudgets(activePeriod?.id);
+  transactions=await loadTransactions(activePeriod?.id);
+  renderSelectedMonth();
+}
+
+function renderSelectedMonth(){
+  const selectedDate=new Date(selectedMonthDate+'T12:00:00');
+  const selectedLabel=monthLabel(selectedDate);
+  document.querySelector('#selected-month-label').textContent=selectedLabel;
+  document.querySelector('#return-current-month').disabled=selectedMonthDate===monthDateString();
+  renderHome();
+  renderBudgetRows();
+  renderTransactionForm();
+  renderTransactions();
+}
+
+function nextMonthDateString(monthDate){
+  const d=new Date(monthDate+'T12:00:00');
+  d.setMonth(d.getMonth()+1,1);
+  const y=d.getFullYear();
+  const m=String(d.getMonth()+1).padStart(2,'0');
+  return `${y}-${m}-01`;
+}
+
+document.querySelector('#return-current-month').addEventListener('click',async()=>{
+  clearMessage('app');
+  await selectMonth(monthDateString());
+  setView('configure');
+});
+
+document.querySelector('#create-next-month').addEventListener('click',async()=>{
+  clearMessage('app');
+  const button=document.querySelector('#create-next-month');
+  button.disabled=true;
+  button.textContent='Preparando…';
+  try{
+    const nextMonth=nextMonthDateString(selectedMonthDate);
+    const existing=await loadPeriod(nextMonth);
+    if(existing){
+      await selectMonth(nextMonth);
+      setView('configure');
+      showMessage(`${monthLabel(new Date(nextMonth+'T12:00:00'))} ya existía. Lo abrí para que puedas editarlo.`,'success','app');
+      return;
+    }
+
+    const copiedBudgets={};
+    for(const cat of allCategories){
+      copiedBudgets[cat.id]=Number(monthlyBudgets[cat.id]??baseBudgets[cat.id]??0);
+    }
+
+    const {data:newPeriod,error:periodError}=await supabase.from('monthly_periods')
+      .insert({user_id:currentUser.id,month_date:nextMonth,income:0})
+      .select('id,income,month_date')
+      .single();
+    if(periodError)throw periodError;
+
+    const rows=allCategories.map(cat=>({
+      user_id:currentUser.id,
+      monthly_period_id:newPeriod.id,
+      category_id:cat.id,
+      budget_amount:Number(copiedBudgets[cat.id]||0)
+    }));
+
+    if(rows.length){
+      const {error:budgetError}=await supabase.from('monthly_budgets').insert(rows);
+      if(budgetError){
+        await supabase.from('monthly_periods').delete().eq('id',newPeriod.id);
+        throw budgetError;
+      }
+    }
+
+    selectedMonthDate=nextMonth;
+    activePeriod=newPeriod;
+    monthlyBudgets=copiedBudgets;
+    transactions=[];
+    renderSelectedMonth();
+    setView('configure');
+    showMessage(`${monthLabel(new Date(nextMonth+'T12:00:00'))} fue creado copiando los presupuestos del mes anterior. Ingresa el nuevo ingreso y ajusta solo lo que cambie.`,'success','app');
+  }catch(error){
+    console.error(error);
+    showMessage('No pudimos crear el siguiente mes. Inténtalo nuevamente.','error','app');
+  }finally{
+    button.disabled=false;
+    button.textContent='Crear siguiente mes';
+  }
+});
+
 async function refreshAppData(){
+  selectedMonthDate=monthDateString();
   const [loadedCategories,loadedBase,period]=await Promise.all([
-    loadCategories(),loadBaseBudgets(),loadCurrentPeriod()
+    loadCategories(),loadBaseBudgets(),loadPeriod(selectedMonthDate)
   ]);
   allCategories=loadedCategories;
   categories=loadedCategories.filter(c=>c.is_active);
@@ -743,10 +845,7 @@ async function refreshAppData(){
   monthlyBudgets=await loadMonthlyBudgets(period?.id);
   transactions=await loadTransactions(period?.id);
   await loadHistoricalData();
-  renderHome();
-  renderBudgetRows();
-  renderTransactionForm();
-  renderTransactions();
+  renderSelectedMonth();
   renderComparisons();
   renderCategoryManager();
 }
