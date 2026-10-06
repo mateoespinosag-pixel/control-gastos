@@ -1,0 +1,20 @@
+{
+  "name": "Control de gastos",
+  "short_name": "Gastos",
+  "description": "Control personal de ingresos, presupuestos y gastos.",
+  "start_url": "/control-gastos/",
+  "scope": "/control-gastos/",
+  "display": "standalone",
+  "background_color": "#f4f6f8",
+  "theme_color": "#182028",
+  "lang": "es-EC",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/control-gastos/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
