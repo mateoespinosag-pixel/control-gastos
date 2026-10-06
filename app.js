@@ -198,6 +198,31 @@ async function loadMonthlyBudgets(periodId){
   return Object.fromEntries((data??[]).map(x=>[x.category_id,Number(x.budget_amount)]));
 }
 
+function categoryVisual(name){
+  const key=(name||'').toLowerCase();
+  const rules=[
+    [/servicios|luz|agua|electric|básic|basico/,['💡','#ffcc00','#fff8d8']],
+    [/gym|gimnas|fitness/,['🏋️','#ff375f','#ffe8ee']],
+    [/casa|hogar|arriendo|vivienda/,['🏠','#5e5ce6','#eeedff']],
+    [/compra|super|mercado|shopping/,['🛍️','#af52de','#f7eaff']],
+    [/almuerzo|comida|restaur|aliment/,['🍽️','#ff9f0a','#fff1d6']],
+    [/salida|ocio|entreten|diversi/,['🎉','#ff2d55','#ffe8ef']],
+    [/parqueo|gasolina|auto|carro|transporte/,['🚗','#0a84ff','#e7f3ff']],
+    [/internet|wifi|datos/,['📶','#64d2ff','#e9faff']],
+    [/seguro/,['🛡️','#30d158','#e8f8ed']],
+    [/diferido|tarjeta|cuota|crédito|credito/,['💳','#bf5af2','#f5eaff']],
+    [/limpieza|aseo/,['✨','#ffd60a','#fff9d8']],
+    [/extra|otros|varios/,['➕','#8e8e93','#f1f1f4']]
+  ];
+  for(const [rx,visual] of rules){ if(rx.test(key)) return visual; }
+  const palette=[
+    ['●','#007aff','#eaf3ff'],['●','#34c759','#e9f8ee'],['●','#ff9500','#fff3df'],
+    ['●','#af52de','#f6eaff'],['●','#ff2d55','#ffe9ef'],['●','#5ac8fa','#eaf9ff']
+  ];
+  let hash=0; for(const ch of key) hash=(hash*31+ch.charCodeAt(0))>>>0;
+  return palette[hash%palette.length];
+}
+
 function renderHome(){
   const income=Number(activePeriod?.income||0);
   const spentTotal=transactions.reduce((sum,t)=>sum+Number(t.amount||0),0);
@@ -231,7 +256,11 @@ function renderHome(){
     const item=document.createElement('article');
     const level=budget<=0 ? (spent>0?'danger':'unassigned') : pct>=90?'danger':pct>=70?'warning':'healthy';
     item.className=`category-card level-${level}`;
-    item.innerHTML='<div class="category-top"><strong></strong><span class="category-chip"></span></div><b></b><span class="category-status"></span><div class="category-progress" role="progressbar" aria-valuemin="0"><span></span></div>';
+    const [icon,iconColor,iconBg]=categoryVisual(c.name);
+    item.style.setProperty('--category-accent',iconColor);
+    item.style.setProperty('--category-icon-bg',iconBg);
+    item.innerHTML='<div class="category-top"><div class="category-title-wrap"><span class="category-icon" aria-hidden="true"></span><strong></strong></div><span class="category-chip"></span></div><b></b><span class="category-status"></span><div class="category-progress" role="progressbar" aria-valuemin="0"><span></span></div>';
+    item.querySelector('.category-icon').textContent=icon;
     item.querySelector('strong').textContent=c.name;
     item.querySelector('b').textContent=`${money(spent)} / ${money(budget)}`;
     const chip=item.querySelector('.category-chip');
