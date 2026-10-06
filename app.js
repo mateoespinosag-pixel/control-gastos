@@ -76,15 +76,47 @@ function setAuthMode(mode){
   tabRegister.classList.toggle('active',!isLogin);
 }
 
+let currentView='home';
+
+function animateView(target){
+  if(!target || window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  target.animate([
+    {opacity:0,transform:'translateY(10px) scale(.992)'},
+    {opacity:1,transform:'translateY(0) scale(1)'}
+  ],{
+    duration:260,
+    easing:'cubic-bezier(.22,.8,.25,1)',
+    fill:'both'
+  });
+
+  const items=target.querySelectorAll('.hero-card,.summary-card,.panel,.current-snapshot,.comparison-block');
+  items.forEach((el,index)=>{
+    el.animate([
+      {opacity:0,transform:'translateY(8px)'},
+      {opacity:1,transform:'translateY(0)'}
+    ],{
+      duration:300,
+      delay:Math.min(index*28,140),
+      easing:'cubic-bezier(.22,.8,.25,1)',
+      fill:'both'
+    });
+  });
+}
+
 function setView(view){
   clearMessage('app');
-  homeView.classList.toggle('hidden',view!=='home');
-  configureView.classList.toggle('hidden',view!=='configure');
-  transactionsView.classList.toggle('hidden',view!=='transactions');
-  comparisonsView.classList.toggle('hidden',view!=='comparisons');
+  const views={
+    home:homeView,
+    configure:configureView,
+    transactions:transactionsView,
+    comparisons:comparisonsView
+  };
+  Object.entries(views).forEach(([name,el])=>el.classList.toggle('hidden',name!==view));
   document.querySelectorAll('.nav-tab[data-view]').forEach(btn=>{
     btn.classList.toggle('active',btn.dataset.view===view);
   });
+  if(view!==currentView)animateView(views[view]);
+  currentView=view;
 }
 
 tabLogin.addEventListener('click',()=>setAuthMode('login'));
