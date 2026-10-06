@@ -240,16 +240,16 @@ function renderHome(){
       chip.textContent=spent>0?'Sin presupuesto':'Sin asignar';
       status.textContent=spent>0?`Gastado sin presupuesto: ${money(spent)}`:'Asigna un presupuesto';
     }else if(spent>budget){
-      chip.textContent='Excedido';
+      chip.textContent=`Excedido · ${Math.round(pct)}%`;
       status.textContent=`Excedido por ${money(spent-budget)}`;
     }else if(pct>=90){
-      chip.textContent='Al límite';
+      chip.textContent=`Al límite · ${Math.round(pct)}%`;
       status.textContent=`Solo quedan ${money(remaining)}`;
     }else if(pct>=70){
-      chip.textContent='Atención';
+      chip.textContent=`Atención · ${Math.round(pct)}%`;
       status.textContent=`Disponible: ${money(remaining)}`;
     }else{
-      chip.textContent='En orden';
+      chip.textContent=`En orden · ${Math.round(pct)}%`;
       status.textContent=`Disponible: ${money(remaining)}`;
     }
     const progress=item.querySelector('.category-progress');
