@@ -3,7 +3,9 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.117.2';
 const SUPABASE_URL='https://ddcwvfvxfpoojafpsyqy.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY='sb_publishable_OtUbIQyOYdBYCgp3DwU1Pg_1ns2C-yq';
 const APP_URL='https://mateoespinosag-pixel.github.io/control-gastos/';
-const supabase=createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
+const supabase=createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{
+  auth:{experimental:{passkey:true}}
+});
 
 const authView=document.querySelector('#auth-view');
 const dashboardView=document.querySelector('#dashboard-view');
@@ -15,6 +17,9 @@ const authMessage=document.querySelector('#auth-message');
 const appMessage=document.querySelector('#app-message');
 const logoutButton=document.querySelector('#logout-button');
 const forgotPasswordButton=document.querySelector('#forgot-password');
+const passkeyLoginButton=document.querySelector('#passkey-login');
+const registerPasskeyButton=document.querySelector('#register-passkey');
+const passkeyStatus=document.querySelector('#passkey-status');
 const homeView=document.querySelector('#home-view');
 const configureView=document.querySelector('#configure-view');
 const transactionsView=document.querySelector('#transactions-view');
@@ -169,6 +174,92 @@ registerForm.addEventListener('submit',async(e)=>{
   if(!data.session){showMessage('Cuenta creada. Revisa tu correo y confirma tu dirección antes de ingresar.','success');return;}
   await renderSession();
 });
+
+function passkeysSupported(){
+  return 'PublicKeyCredential' in window && 'credentials' in navigator;
+}
+
+function passkeyErrorMessage(error){
+  const code=error?.code||error?.error_code||'';
+  if(code==='passkey_disabled')return 'Face ID todavía no está activado en Supabase para esta app.';
+  if(code==='webauthn_credential_exists')return 'Face ID ya está registrado en esta cuenta.';
+  if(code==='webauthn_credential_not_found')return 'No encontramos una credencial Face ID registrada para esta app.';
+  if(code==='webauthn_challenge_expired')return 'La solicitud de Face ID expiró. Inténtalo nuevamente.';
+  if(error?.name==='NotAllowedError')return 'La verificación con Face ID fue cancelada.';
+  return error?.message||'No pudimos completar la autenticación con Face ID.';
+}
+
+if(passkeyLoginButton){
+  passkeyLoginButton.disabled=!passkeysSupported();
+  if(!passkeysSupported())passkeyLoginButton.title='Este dispositivo o navegador no admite passkeys.';
+  passkeyLoginButton.addEventListener('click',async()=>{
+    clearMessage();
+    passkeyLoginButton.disabled=true;
+    const original=passkeyLoginButton.innerHTML;
+    passkeyLoginButton.textContent='Verificando…';
+    try{
+      const {data,error}=await supabase.auth.signInWithPasskey();
+      if(error)throw error;
+      if(data?.session)await renderSession();
+    }catch(error){
+      console.error(error);
+      showMessage(passkeyErrorMessage(error),'error');
+    }finally{
+      passkeyLoginButton.innerHTML=original;
+      passkeyLoginButton.disabled=!passkeysSupported();
+    }
+  });
+}
+
+async function refreshPasskeyStatus(){
+  if(!registerPasskeyButton || !passkeyStatus)return;
+  if(!passkeysSupported()){
+    registerPasskeyButton.disabled=true;
+    passkeyStatus.textContent='Este dispositivo o navegador no admite passkeys.';
+    return;
+  }
+  try{
+    const {data,error}=await supabase.auth.passkey.list();
+    if(error)throw error;
+    const list=Array.isArray(data)?data:(data?.passkeys||[]);
+    if(list.length){
+      registerPasskeyButton.textContent='Añadir otro dispositivo';
+      passkeyStatus.textContent=`Face ID / passkey activo · ${list.length} credencial${list.length===1?'':'es'} registrada${list.length===1?'':'s'}.`;
+    }else{
+      registerPasskeyButton.textContent='Activar Face ID';
+      passkeyStatus.textContent='Puedes activar un inicio de sesión biométrico en este dispositivo.';
+    }
+  }catch(error){
+    console.error(error);
+    registerPasskeyButton.textContent='Activar Face ID';
+    passkeyStatus.textContent='Face ID requiere activar Passkeys en la configuración de Supabase.';
+  }
+}
+
+if(registerPasskeyButton){
+  registerPasskeyButton.addEventListener('click',async()=>{
+    clearMessage('app');
+    if(!passkeysSupported()){
+      showMessage('Este dispositivo o navegador no admite passkeys.','error','app');
+      return;
+    }
+    const original=registerPasskeyButton.textContent;
+    registerPasskeyButton.disabled=true;
+    registerPasskeyButton.textContent='Activando…';
+    try{
+      const {data,error}=await supabase.auth.registerPasskey();
+      if(error)throw error;
+      await refreshPasskeyStatus();
+      showMessage('Face ID quedó registrado para iniciar sesión en esta cuenta.','success','app');
+    }catch(error){
+      console.error(error);
+      showMessage(passkeyErrorMessage(error),'error','app');
+      registerPasskeyButton.textContent=original;
+    }finally{
+      registerPasskeyButton.disabled=false;
+    }
+  });
+}
 
 forgotPasswordButton.addEventListener('click',async()=>{
   clearMessage();
@@ -962,6 +1053,7 @@ async function renderSession(){
     const profile=await loadProfile(currentUser.id);
     document.querySelector('#welcome-title').textContent=`Hola, ${profile.name}`;
     await refreshAppData();
+    await refreshPasskeyStatus();
   }catch(error){
     console.error(error);
     authView.classList.add('hidden');
