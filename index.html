@@ -34,6 +34,8 @@
       <label>Correo<input id="login-email" type="email" autocomplete="email" required></label>
       <label>Contraseña<input id="login-password" type="password" autocomplete="current-password" required></label>
       <button class="primary" type="submit">Ingresar</button>
+      <div class="auth-divider"><span>o</span></div>
+      <button id="passkey-login" class="passkey-button" type="button"><span class="face-id-symbol" aria-hidden="true">⌁</span><span>Entrar con Face ID</span></button>
       <button id="forgot-password" class="link-button" type="button">Olvidé mi contraseña</button>
     </form>
     <form id="register-form" class="form hidden">
@@ -255,6 +257,16 @@
           </form>
           <div id="category-manager-list" class="category-manager-list"></div>
         </div>
+      </section>
+
+      <section class="security-card">
+        <div class="security-icon" aria-hidden="true">⌁</div>
+        <div class="security-copy">
+          <p class="eyebrow">SEGURIDAD</p>
+          <h3>Face ID</h3>
+          <p id="passkey-status" class="muted no-margin">Puedes activar un inicio de sesión biométrico en este dispositivo.</p>
+        </div>
+        <button id="register-passkey" class="primary compact" type="button">Activar Face ID</button>
       </section>
     </section>
   </section>
