@@ -333,11 +333,15 @@ function renderBudgetRows(){
     const row=document.createElement('div');
     row.className='budget-row';
     row.dataset.categoryId=c.id;
+    const [icon,iconColor,iconBg]=categoryVisual(c.name);
+    row.style.setProperty('--category-accent',iconColor);
+    row.style.setProperty('--category-icon-bg',iconBg);
     row.innerHTML=`
-      <div class="budget-row-name"></div>
+      <div class="budget-row-name-wrap"><span class="budget-category-icon" aria-hidden="true"></span><div class="budget-row-name"></div></div>
       <div class="money-input"><span>$</span><input class="budget-amount" type="number" min="0" step="0.01" inputmode="decimal"></div>
       <div class="percent-wrap"><input class="budget-percent" type="number" min="0" step="0.1" inputmode="decimal"><span>%</span></div>
     `;
+    row.querySelector('.budget-category-icon').textContent=icon;
     row.querySelector('.budget-row-name').textContent=c.name;
     row.querySelector('.budget-amount').value=amount||'';
     row.querySelector('.budget-percent').value=percent ? percent.toFixed(1) : '';
@@ -476,7 +480,11 @@ function renderTransactions(){
     const category=allCategories.find(c=>c.id===t.category_id);
     const row=document.createElement('div');
     row.className='transaction-row';
-    row.innerHTML='<span class="transaction-date"></span><span class="transaction-description"></span><span class="transaction-category"></span><span class="transaction-amount"></span><button class="icon-button" type="button" aria-label="Eliminar">×</button>';
+    const [icon,iconColor,iconBg]=categoryVisual(category?.name||'');
+    row.style.setProperty('--category-accent',iconColor);
+    row.style.setProperty('--category-icon-bg',iconBg);
+    row.innerHTML='<span class="transaction-category-icon" aria-hidden="true"></span><span class="transaction-date"></span><span class="transaction-description"></span><span class="transaction-category"></span><span class="transaction-amount"></span><button class="icon-button" type="button" aria-label="Eliminar">×</button>';
+    row.querySelector('.transaction-category-icon').textContent=icon;
     row.querySelector('.transaction-date').textContent=new Intl.DateTimeFormat('es-EC',{day:'2-digit',month:'short'}).format(new Date(t.transaction_date+'T12:00:00'));
     row.querySelector('.transaction-description').textContent=t.description;
     row.querySelector('.transaction-category').textContent=category?.name||'Sin categoría';
@@ -649,10 +657,14 @@ function renderCategoryHistory(categoryId){
     const budget=Number(budgetMap[r.id]||0);
     const item=document.createElement('div');
     item.className='category-history-row';
-    item.innerHTML='<span class="category-month"></span><div class="category-track"><span></span></div><span class="category-value"></span>';
+    const pct=budget>0?spent/budget*100:0;
+    const level=budget<=0?(spent>0?'danger':'unassigned'):pct>=90?'danger':pct>=70?'warning':'healthy';
+    item.classList.add(`level-${level}`);
+    item.innerHTML='<span class="category-month"></span><div class="category-track"><span></span></div><span class="category-value"></span><span class="history-chip"></span>';
     item.querySelector('.category-month').textContent=monthLabelFromDateString(r.month_date);
     item.querySelector('.category-track span').style.width=`${Math.max(2,spent/maxValue*100)}%`;
     item.querySelector('.category-value').textContent=`${money(spent)} / ${money(budget)}`;
+    item.querySelector('.history-chip').textContent=budget>0?`${Math.round(pct)}%`:'—';
     box.appendChild(item);
   }
 }
