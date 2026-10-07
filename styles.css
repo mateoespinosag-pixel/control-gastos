@@ -592,3 +592,32 @@ input:focus,select:focus{border-color:#80baff;box-shadow:0 0 0 4px rgba(0,122,25
   .category-value{grid-column:2;text-align:left}
   .history-chip{grid-column:3;grid-row:1/3;align-self:center}
 }
+
+/* Face ID / Passkey */
+.auth-divider{display:flex;align-items:center;gap:10px;color:#a0a0a8;font-size:11px;font-weight:750}
+.auth-divider:before,.auth-divider:after{content:"";height:1px;flex:1;background:#e4e4ea}
+.auth-divider span{padding:0 3px}
+.passkey-button{
+  width:100%;border:1px solid #dfe4ee;background:linear-gradient(180deg,#fff,#f7f9fc);
+  color:#1c1c1e;border-radius:14px;padding:12px 14px;font-weight:850;
+  display:flex;align-items:center;justify-content:center;gap:9px;
+  box-shadow:0 5px 14px rgba(32,38,65,.04)
+}
+.passkey-button:active{transform:scale(.98)}
+.face-id-symbol,.security-icon{
+  width:30px;height:30px;border-radius:10px;display:grid;place-items:center;
+  background:linear-gradient(135deg,#007aff,#64d2ff);color:white;
+  font-size:22px;font-weight:500;line-height:1
+}
+.security-card{
+  display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;
+  margin-top:24px;padding:18px;border-radius:20px;
+  background:linear-gradient(135deg,#f8fbff 0%,#eef5ff 50%,#f4efff 100%);
+  border:1px solid #e2e8f6
+}
+.security-copy h3{margin-bottom:5px}
+.security-copy .eyebrow{color:#007aff;margin-bottom:4px}
+@media(max-width:700px){
+  .security-card{grid-template-columns:auto 1fr}
+  .security-card button{grid-column:1/-1;width:100%}
+}
