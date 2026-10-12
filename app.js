@@ -585,6 +585,25 @@ function renderTransactions(){
   }
 }
 
+function parseDecimalInput(value){
+  let text=String(value??'').trim().replace(/\s/g,'');
+  if(!text)return 0;
+  const lastComma=text.lastIndexOf(',');
+  const lastDot=text.lastIndexOf('.');
+  if(lastComma>-1 && lastDot>-1){
+    const decimalSeparator=lastComma>lastDot?',':'.';
+    const thousandsSeparator=decimalSeparator===','?'.':',';
+    text=text.split(thousandsSeparator).join('');
+    text=text.replace(decimalSeparator,'.');
+  }else if(lastComma>-1){
+    text=text.replace(/\./g,'').replace(',','.');
+  }else{
+    text=text.replace(/,/g,'');
+  }
+  const number=Number(text);
+  return Number.isFinite(number)?number:0;
+}
+
 transactionForm.addEventListener('submit',async(e)=>{
   e.preventDefault(); clearMessage('app');
   if(selectedMonthDate!==monthDateString()){showMessage('Los movimientos solo se registran en el mes calendario actual. Vuelve al mes actual para ingresar gastos.','error','app');return;}
@@ -592,7 +611,7 @@ transactionForm.addEventListener('submit',async(e)=>{
   const transactionDate=document.querySelector('#transaction-date').value;
   const description=document.querySelector('#transaction-description').value.trim();
   const categoryId=document.querySelector('#transaction-category').value;
-  const amount=Number(document.querySelector('#transaction-amount').value||0);
+  const amount=parseDecimalInput(document.querySelector('#transaction-amount').value);
   if(!transactionDate||!description||!categoryId||amount<=0){showMessage('Completa todos los campos del gasto.','error','app');return;}
   if(transactionDate.slice(0,7)!==selectedMonthDate.slice(0,7)){showMessage('La fecha debe pertenecer al mes seleccionado.','error','app');return;}
   const button=transactionForm.querySelector('button[type="submit"]');
