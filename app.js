@@ -39,6 +39,7 @@ let allTransactions=[];
 let allMonthlyBudgets=[];
 let selectedMonthDate=monthDateString();
 let comparisonCurrentPeriod=null;
+let selectedTransactionCategoryId=null;
 
 function money(value){
   return new Intl.NumberFormat('es-EC',{style:'currency',currency:'USD',minimumFractionDigits:2}).format(Number(value||0));
@@ -126,7 +127,20 @@ function setView(view){
 
 tabLogin.addEventListener('click',()=>setAuthMode('login'));
 tabRegister.addEventListener('click',()=>setAuthMode('register'));
-document.querySelectorAll('.nav-tab[data-view]').forEach(btn=>btn.addEventListener('click',()=>setView(btn.dataset.view)));
+document.querySelectorAll('.nav-tab[data-view]').forEach(btn=>btn.addEventListener('click',()=>{
+  if(btn.dataset.view==='transactions'){
+    selectedTransactionCategoryId=null;
+    renderTransactions();
+  }
+  setView(btn.dataset.view);
+}));
+const clearTransactionsFilterButton=document.querySelector('#clear-transactions-filter');
+if(clearTransactionsFilterButton){
+  clearTransactionsFilterButton.addEventListener('click',()=>{
+    selectedTransactionCategoryId=null;
+    renderTransactions();
+  });
+}
 document.querySelector('#go-configure').addEventListener('click',()=>setView('configure'));
 
 loginForm.addEventListener('submit',async(e)=>{
@@ -408,6 +422,21 @@ function renderHome(){
     progress.setAttribute('aria-valuenow',String(Math.max(0,Math.round(pct))));
     progress.setAttribute('aria-label',`${c.name}: ${Math.round(pct)}% consumido`);
     progress.querySelector('span').style.width=`${Math.max(0,Math.min(pct,100))}%`;
+    const openCategory=()=>{
+      selectedTransactionCategoryId=c.id;
+      renderTransactions();
+      setView('transactions');
+    };
+    item.setAttribute('role','button');
+    item.setAttribute('tabindex','0');
+    item.setAttribute('aria-label',`Ver gastos de ${c.name}`);
+    item.addEventListener('click',openCategory);
+    item.addEventListener('keydown',(event)=>{
+      if(event.key==='Enter' || event.key===' '){
+        event.preventDefault();
+        openCategory();
+      }
+    });
     grid.appendChild(item);
   }
 }
@@ -563,11 +592,24 @@ function renderTransactionForm(){
 function renderTransactions(){
   const list=document.querySelector('#transactions-list');
   const empty=document.querySelector('#transactions-empty');
-  const total=transactions.reduce((sum,t)=>sum+Number(t.amount||0),0);
+  const filterBar=document.querySelector('#transactions-filter-bar');
+  const filterLabel=document.querySelector('#transactions-filter-label');
+  const filteredTransactions=selectedTransactionCategoryId
+    ? transactions.filter(t=>t.category_id===selectedTransactionCategoryId)
+    : transactions;
+  const selectedCategory=allCategories.find(c=>c.id===selectedTransactionCategoryId);
+  const total=filteredTransactions.reduce((sum,t)=>sum+Number(t.amount||0),0);
   document.querySelector('#transactions-total').textContent=money(total);
+  if(filterBar && filterLabel){
+    filterBar.classList.toggle('hidden',!selectedTransactionCategoryId);
+    filterLabel.textContent=selectedCategory?selectedCategory.name:'Categoría';
+  }
   list.innerHTML='';
-  empty.classList.toggle('hidden',transactions.length>0);
-  for(const t of transactions){
+  empty.textContent=selectedTransactionCategoryId
+    ? `Todavía no hay gastos registrados en ${selectedCategory?.name||'esta categoría'} este mes.`
+    : 'Todavía no hay movimientos registrados este mes.';
+  empty.classList.toggle('hidden',filteredTransactions.length>0);
+  for(const t of filteredTransactions){
     const category=allCategories.find(c=>c.id===t.category_id);
     const row=document.createElement('div');
     row.className='transaction-row';
