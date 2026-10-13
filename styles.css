@@ -621,3 +621,18 @@ input:focus,select:focus{border-color:#80baff;box-shadow:0 0 0 4px rgba(0,122,25
   .security-card{grid-template-columns:auto 1fr}
   .security-card button{grid-column:1/-1;width:100%}
 }
+
+/* Clickable category cards + transaction filter */
+.category-card[role="button"]{cursor:pointer;outline:none}
+.category-card[role="button"]:active{transform:scale(.985)}
+.category-card[role="button"]:focus-visible{box-shadow:0 0 0 4px rgba(0,122,255,.14),var(--shadow-soft);border-color:#8fc2ff}
+.transactions-filter-bar{display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap}
+.transactions-filter-chip{
+  display:inline-flex;align-items:center;padding:6px 9px;border-radius:999px;
+  background:#eaf3ff;color:#007aff;font-size:11px;font-weight:850
+}
+.filter-clear-button{
+  border:0;background:transparent;color:#007aff;font-size:11px;font-weight:850;
+  padding:6px 4px
+}
+.filter-clear-button:active{opacity:.6}
