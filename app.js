@@ -40,6 +40,7 @@ let allMonthlyBudgets=[];
 let selectedMonthDate=monthDateString();
 let comparisonCurrentPeriod=null;
 let selectedTransactionCategoryId=null;
+let availablePeriods=[];
 
 function money(value){
   return new Intl.NumberFormat('es-EC',{style:'currency',currency:'USD',minimumFractionDigits:2}).format(Number(value||0));
@@ -304,6 +305,15 @@ async function loadBaseBudgets(){
   const {data,error}=await supabase.from('base_budgets').select('category_id,budget_amount');
   if(error)throw error;
   return Object.fromEntries((data??[]).map(x=>[x.category_id,Number(x.budget_amount)]));
+}
+
+async function loadAvailablePeriods(){
+  const {data,error}=await supabase.from('monthly_periods')
+    .select('id,income,month_date')
+    .order('month_date',{ascending:true});
+  if(error)throw error;
+  availablePeriods=data??[];
+  return availablePeriods;
 }
 
 async function loadPeriod(monthDate=selectedMonthDate){
@@ -1002,10 +1012,47 @@ function renderSelectedMonth(){
   const selectedLabel=monthLabel(selectedDate);
   document.querySelector('#selected-month-label').textContent=selectedLabel;
   document.querySelector('#return-current-month').disabled=selectedMonthDate===monthDateString();
+  renderMonthNavigator();
   renderHome();
   renderBudgetRows();
   renderTransactionForm();
   renderTransactions();
+  applyMonthReadOnlyState();
+}
+
+function renderMonthNavigator(){
+  const select=document.querySelector('#month-select');
+  const prev=document.querySelector('#month-prev');
+  const next=document.querySelector('#month-next');
+  const badge=document.querySelector('#month-current-badge');
+  if(!select||!prev||!next||!badge)return;
+
+  select.innerHTML='';
+  for(const period of availablePeriods){
+    const option=document.createElement('option');
+    option.value=period.month_date;
+    option.textContent=monthLabel(new Date(period.month_date+'T12:00:00'));
+    select.appendChild(option);
+  }
+  if(availablePeriods.some(p=>p.month_date===selectedMonthDate))select.value=selectedMonthDate;
+
+  const index=availablePeriods.findIndex(p=>p.month_date===selectedMonthDate);
+  prev.disabled=index<=0;
+  next.disabled=index<0 || index>=availablePeriods.length-1;
+  badge.classList.toggle('hidden',selectedMonthDate!==monthDateString());
+}
+
+function applyMonthReadOnlyState(){
+  const isPast=selectedMonthDate<monthDateString();
+  const editableControls=[
+    incomeInput,
+    ...document.querySelectorAll('.budget-amount,.budget-percent'),
+    document.querySelector('#save-month'),
+    document.querySelector('#save-base')
+  ].filter(Boolean);
+  editableControls.forEach(el=>el.disabled=isPast);
+  const configPanel=document.querySelector('.config-panel');
+  if(configPanel)configPanel.classList.toggle('month-readonly',isPast);
 }
 
 function nextMonthDateString(monthDate){
@@ -1014,6 +1061,29 @@ function nextMonthDateString(monthDate){
   const y=d.getFullYear();
   const m=String(d.getMonth()+1).padStart(2,'0');
   return `${y}-${m}-01`;
+}
+
+const monthSelect=document.querySelector('#month-select');
+const monthPrev=document.querySelector('#month-prev');
+const monthNext=document.querySelector('#month-next');
+
+if(monthSelect){
+  monthSelect.addEventListener('change',async()=>{
+    clearMessage('app');
+    await selectMonth(monthSelect.value);
+  });
+}
+if(monthPrev){
+  monthPrev.addEventListener('click',async()=>{
+    const index=availablePeriods.findIndex(p=>p.month_date===selectedMonthDate);
+    if(index>0)await selectMonth(availablePeriods[index-1].month_date);
+  });
+}
+if(monthNext){
+  monthNext.addEventListener('click',async()=>{
+    const index=availablePeriods.findIndex(p=>p.month_date===selectedMonthDate);
+    if(index>=0 && index<availablePeriods.length-1)await selectMonth(availablePeriods[index+1].month_date);
+  });
 }
 
 document.querySelector('#return-current-month').addEventListener('click',async()=>{
@@ -1041,6 +1111,7 @@ document.querySelector('#create-next-month').addEventListener('click',async()=>{
         if(updateError)throw updateError;
         existing.income=updatedPeriod.income;
       }
+      await loadAvailablePeriods();
       await selectMonth(nextMonth);
       setView('configure');
       showMessage(`${monthLabel(new Date(nextMonth+'T12:00:00'))} ya existía. Copié el ingreso anterior si estaba vacío y lo abrí para que puedas editarlo.`,'success','app');
@@ -1078,6 +1149,7 @@ document.querySelector('#create-next-month').addEventListener('click',async()=>{
     activePeriod=newPeriod;
     monthlyBudgets=copiedBudgets;
     transactions=[];
+    await loadAvailablePeriods();
     renderSelectedMonth();
     setView('configure');
     showMessage(`${monthLabel(new Date(nextMonth+'T12:00:00'))} fue creado copiando el ingreso y los presupuestos del mes anterior. Ajusta solo lo que cambie.`,'success','app');
@@ -1093,7 +1165,7 @@ document.querySelector('#create-next-month').addEventListener('click',async()=>{
 async function refreshAppData(){
   selectedMonthDate=monthDateString();
   const [loadedCategories,loadedBase,period]=await Promise.all([
-    loadCategories(),loadBaseBudgets(),loadPeriod(selectedMonthDate)
+    loadCategories(),loadBaseBudgets(),loadPeriod(selectedMonthDate),loadAvailablePeriods()
   ]);
   allCategories=loadedCategories;
   categories=loadedCategories.filter(c=>c.is_active);
