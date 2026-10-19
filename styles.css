@@ -636,3 +636,48 @@ input:focus,select:focus{border-color:#80baff;box-shadow:0 0 0 4px rgba(0,122,25
   padding:6px 4px
 }
 .filter-clear-button:active{opacity:.6}
+
+/* Global month navigator */
+.global-month-nav{
+  display:grid;grid-template-columns:44px minmax(180px,1fr) 44px;align-items:center;gap:10px;
+  max-width:420px;margin:0 auto 22px;padding:6px;
+  background:rgba(249,249,253,.9);border:1px solid #e2e5ee;border-radius:18px;
+  box-shadow:0 8px 24px rgba(35,40,75,.06);backdrop-filter:blur(18px)
+}
+.month-nav-button{
+  width:38px;height:38px;border:0;border-radius:12px;background:#fff;color:#007aff;
+  font-size:28px;line-height:1;font-weight:500;box-shadow:0 4px 12px rgba(30,40,75,.05)
+}
+.month-nav-button:disabled{color:#c8c8ce;background:#f5f5f8;box-shadow:none;cursor:default}
+.month-nav-center{position:relative;display:flex;align-items:center;justify-content:center;gap:7px;min-width:0}
+.month-select{
+  appearance:none;-webkit-appearance:none;width:auto;max-width:100%;border:0;background:transparent;
+  padding:8px 24px 8px 8px;text-align:center;font-size:15px;font-weight:850;color:#1c1c1e;
+  box-shadow:none;cursor:pointer
+}
+.month-select:focus{box-shadow:none;border:0}
+.month-nav-center:after{
+  content:"⌄";position:absolute;right:8px;top:50%;transform:translateY(-54%);
+  color:#8e8e93;font-size:13px;pointer-events:none
+}
+.month-current-badge{
+  flex:0 0 auto;background:#e7f8ed;color:#248b51;border-radius:999px;
+  padding:4px 7px;font-size:9px;font-weight:850;text-transform:uppercase;letter-spacing:.04em
+}
+.config-panel.month-readonly:before{
+  content:"Mes anterior · solo consulta";display:block;margin:0 0 18px;padding:10px 12px;
+  border-radius:14px;background:#f2f2f7;color:#6e6e73;font-size:12px;font-weight:800
+}
+.config-panel.month-readonly input:disabled{
+  opacity:1;color:#6e6e73;background:#f6f6f8
+}
+.config-panel.month-readonly .action-row button:disabled{
+  opacity:.45;cursor:default
+}
+@media(max-width:780px){
+  .global-month-nav{
+    margin-bottom:18px;max-width:none;grid-template-columns:42px minmax(0,1fr) 42px;
+    border-radius:17px
+  }
+  .month-select{font-size:14px}
+}
