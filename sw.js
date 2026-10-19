@@ -1,9 +1,9 @@
-const CACHE_NAME='control-gastos-v9';
+const CACHE_NAME='control-gastos-v10';
 const APP_SHELL=[
   '/control-gastos/',
   '/control-gastos/index.html',
-  '/control-gastos/styles.css?v=20261019-nextmonthdecimals1',
-  '/control-gastos/app.js?v=20261019-nextmonthdecimals1',
+  '/control-gastos/styles.css?v=20261019-monthnav1',
+  '/control-gastos/app.js?v=20261019-monthnav1',
   '/control-gastos/manifest.webmanifest',
   '/control-gastos/icon.svg'
 ];
