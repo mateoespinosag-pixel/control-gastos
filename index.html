@@ -62,6 +62,15 @@
     <button class="nav-tab" data-view="configure" type="button">Configurar mes</button>
   </nav>
 
+  <section class="global-month-nav" aria-label="Navegación por mes">
+    <button id="month-prev" class="month-nav-button" type="button" aria-label="Mes anterior">‹</button>
+    <div class="month-nav-center">
+      <select id="month-select" class="month-select" aria-label="Seleccionar mes"></select>
+      <span id="month-current-badge" class="month-current-badge">Actual</span>
+    </div>
+    <button id="month-next" class="month-nav-button" type="button" aria-label="Mes siguiente">›</button>
+  </section>
+
   <div id="app-message" class="message hidden"></div>
 
   <section id="home-view">
