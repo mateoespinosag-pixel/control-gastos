@@ -1031,9 +1031,19 @@ document.querySelector('#create-next-month').addEventListener('click',async()=>{
     const nextMonth=nextMonthDateString(selectedMonthDate);
     const existing=await loadPeriod(nextMonth);
     if(existing){
+      const previousIncome=Number(activePeriod?.income||0);
+      if(Number(existing.income||0)<=0 && previousIncome>0){
+        const {data:updatedPeriod,error:updateError}=await supabase.from('monthly_periods')
+          .update({income:previousIncome})
+          .eq('id',existing.id)
+          .select('id,income,month_date')
+          .single();
+        if(updateError)throw updateError;
+        existing.income=updatedPeriod.income;
+      }
       await selectMonth(nextMonth);
       setView('configure');
-      showMessage(`${monthLabel(new Date(nextMonth+'T12:00:00'))} ya existía. Lo abrí para que puedas editarlo.`,'success','app');
+      showMessage(`${monthLabel(new Date(nextMonth+'T12:00:00'))} ya existía. Copié el ingreso anterior si estaba vacío y lo abrí para que puedas editarlo.`,'success','app');
       return;
     }
 
