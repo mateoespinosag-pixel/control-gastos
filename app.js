@@ -458,8 +458,8 @@ function renderBudgetRows(){
     row.style.setProperty('--category-icon-bg',iconBg);
     row.innerHTML=`
       <div class="budget-row-name-wrap"><span class="budget-category-icon" aria-hidden="true"></span><div class="budget-row-name"></div></div>
-      <div class="money-input"><span>$</span><input class="budget-amount" type="number" min="0" step="0.01" inputmode="decimal"></div>
-      <div class="percent-wrap"><input class="budget-percent" type="number" min="0" step="0.1" inputmode="decimal"><span>%</span></div>
+      <div class="money-input"><span>$</span><input class="budget-amount" type="text" inputmode="decimal" autocomplete="off"></div>
+      <div class="percent-wrap"><input class="budget-percent" type="text" inputmode="decimal" autocomplete="off"><span>%</span></div>
     `;
     row.querySelector('.budget-category-icon').textContent=icon;
     row.querySelector('.budget-row-name').textContent=c.name;
@@ -470,15 +470,15 @@ function renderBudgetRows(){
     const percentInput=row.querySelector('.budget-percent');
 
     amountInput.addEventListener('input',()=>{
-      const inc=Number(incomeInput.value||0);
-      const val=Number(amountInput.value||0);
+      const inc=parseDecimalInput(incomeInput.value);
+      const val=parseDecimalInput(amountInput.value);
       percentInput.value=inc>0 ? (val/inc*100).toFixed(1) : '';
       updateBudgetSummary();
     });
 
     percentInput.addEventListener('input',()=>{
-      const inc=Number(incomeInput.value||0);
-      const pct=Number(percentInput.value||0);
+      const inc=parseDecimalInput(incomeInput.value);
+      const pct=parseDecimalInput(percentInput.value);
       amountInput.value=inc>0 ? (inc*pct/100).toFixed(2) : '';
       updateBudgetSummary();
     });
@@ -490,9 +490,9 @@ function renderBudgetRows(){
 }
 
 function updateBudgetSummary(){
-  const income=Number(incomeInput.value||0);
+  const income=parseDecimalInput(incomeInput.value);
   let total=0;
-  document.querySelectorAll('.budget-amount').forEach(i=>total+=Number(i.value||0));
+  document.querySelectorAll('.budget-amount').forEach(i=>total+=parseDecimalInput(i.value));
   const margin=income-total;
   const pct=income>0 ? total/income*100 : 0;
   document.querySelector('#assigned-total').textContent=money(total);
@@ -502,9 +502,9 @@ function updateBudgetSummary(){
 }
 
 incomeInput.addEventListener('input',()=>{
-  const income=Number(incomeInput.value||0);
+  const income=parseDecimalInput(incomeInput.value);
   document.querySelectorAll('.budget-row').forEach(row=>{
-    const amount=Number(row.querySelector('.budget-amount').value||0);
+    const amount=parseDecimalInput(row.querySelector('.budget-amount').value);
     row.querySelector('.budget-percent').value=income>0 ? (amount/income*100).toFixed(1) : '';
   });
   updateBudgetSummary();
@@ -513,14 +513,14 @@ incomeInput.addEventListener('input',()=>{
 function collectBudgets(){
   const out={};
   document.querySelectorAll('.budget-row').forEach(row=>{
-    out[row.dataset.categoryId]=Number(row.querySelector('.budget-amount').value||0);
+    out[row.dataset.categoryId]=parseDecimalInput(row.querySelector('.budget-amount').value);
   });
   return out;
 }
 
 async function saveConfiguration(saveAsBase=false){
   clearMessage('app');
-  const income=Number(incomeInput.value||0);
+  const income=parseDecimalInput(incomeInput.value);
   if(income<=0){showMessage('Ingresa un ingreso mensual mayor a 0.','error','app');return;}
 
   const budgetMap=collectBudgets();
@@ -1042,8 +1042,9 @@ document.querySelector('#create-next-month').addEventListener('click',async()=>{
       copiedBudgets[cat.id]=Number(monthlyBudgets[cat.id]??baseBudgets[cat.id]??0);
     }
 
+    const previousIncome=Number(activePeriod?.income||0);
     const {data:newPeriod,error:periodError}=await supabase.from('monthly_periods')
-      .insert({user_id:currentUser.id,month_date:nextMonth,income:0})
+      .insert({user_id:currentUser.id,month_date:nextMonth,income:previousIncome})
       .select('id,income,month_date')
       .single();
     if(periodError)throw periodError;
@@ -1069,7 +1070,7 @@ document.querySelector('#create-next-month').addEventListener('click',async()=>{
     transactions=[];
     renderSelectedMonth();
     setView('configure');
-    showMessage(`${monthLabel(new Date(nextMonth+'T12:00:00'))} fue creado copiando los presupuestos del mes anterior. Ingresa el nuevo ingreso y ajusta solo lo que cambie.`,'success','app');
+    showMessage(`${monthLabel(new Date(nextMonth+'T12:00:00'))} fue creado copiando el ingreso y los presupuestos del mes anterior. Ajusta solo lo que cambie.`,'success','app');
   }catch(error){
     console.error(error);
     showMessage('No pudimos crear el siguiente mes. Inténtalo nuevamente.','error','app');
