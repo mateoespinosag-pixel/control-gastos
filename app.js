@@ -57,6 +57,33 @@ function monthDateString(date=new Date()){
   return `${y}-${m}-01`;
 }
 
+const CARD_CUTOFF_DAY=18;
+
+function localDateString(date=new Date()){
+  const y=date.getFullYear();
+  const m=String(date.getMonth()+1).padStart(2,'0');
+  const d=String(date.getDate()).padStart(2,'0');
+  return `${y}-${m}-${d}`;
+}
+
+function billingPeriodMonthDate(date=new Date()){
+  const d=new Date(date.getFullYear(),date.getMonth(),1);
+  if(date.getDate()>CARD_CUTOFF_DAY)d.setMonth(d.getMonth()+1,1);
+  return monthDateString(d);
+}
+
+function billingWindowForPeriod(periodMonthDate){
+  const period=new Date(periodMonthDate+'T12:00:00');
+  const end=new Date(period.getFullYear(),period.getMonth(),CARD_CUTOFF_DAY);
+  const start=new Date(period.getFullYear(),period.getMonth()-1,CARD_CUTOFF_DAY+1);
+  return {start:localDateString(start),end:localDateString(end)};
+}
+
+function dateBelongsToBillingPeriod(dateString,periodMonthDate){
+  const {start,end}=billingWindowForPeriod(periodMonthDate);
+  return dateString>=start && dateString<=end;
+}
+
 function monthLabel(date=new Date()){
   const value=new Intl.DateTimeFormat('es-EC',{month:'long',year:'numeric'}).format(date);
   return value.charAt(0).toUpperCase()+value.slice(1);
@@ -591,12 +618,19 @@ function renderTransactionForm(){
     option.textContent=c.name;
     select.appendChild(option);
   }
-  const today=new Date();
-  const isCurrentMonth=selectedMonthDate===monthDateString();
-  document.querySelector('#transaction-date').value=isCurrentMonth?today.toISOString().slice(0,10):selectedMonthDate;
+  const todayString=localDateString();
+  const currentBillingPeriod=billingPeriodMonthDate();
+  const isCurrentBillingPeriod=selectedMonthDate===currentBillingPeriod;
+  const dateInput=document.querySelector('#transaction-date');
+  const {start,end}=billingWindowForPeriod(selectedMonthDate);
+  dateInput.min=start;
+  dateInput.max=end;
+  dateInput.value=isCurrentBillingPeriod && dateBelongsToBillingPeriod(todayString,selectedMonthDate)
+    ? todayString
+    : end;
   const submitButton=transactionForm.querySelector('button[type="submit"]');
-  submitButton.disabled=!isCurrentMonth;
-  submitButton.textContent=isCurrentMonth?'Registrar gasto':'Solo mes actual';
+  submitButton.disabled=!isCurrentBillingPeriod;
+  submitButton.textContent=isCurrentBillingPeriod?'Registrar gasto':'Solo período actual';
 }
 
 function renderTransactions(){
@@ -658,14 +692,18 @@ function parseDecimalInput(value){
 
 transactionForm.addEventListener('submit',async(e)=>{
   e.preventDefault(); clearMessage('app');
-  if(selectedMonthDate!==monthDateString()){showMessage('Los movimientos solo se registran en el mes calendario actual. Vuelve al mes actual para ingresar gastos.','error','app');return;}
-  if(!activePeriod){showMessage('Primero configura el mes actual.','error','app');setView('configure');return;}
+  if(selectedMonthDate!==billingPeriodMonthDate()){showMessage('Los movimientos solo se registran en el período de tarjeta actual.','error','app');return;}
+  if(!activePeriod){showMessage('Primero configura el período actual.','error','app');setView('configure');return;}
   const transactionDate=document.querySelector('#transaction-date').value;
   const description=document.querySelector('#transaction-description').value.trim();
   const categoryId=document.querySelector('#transaction-category').value;
   const amount=parseDecimalInput(document.querySelector('#transaction-amount').value);
   if(!transactionDate||!description||!categoryId||amount<=0){showMessage('Completa todos los campos del gasto.','error','app');return;}
-  if(transactionDate.slice(0,7)!==selectedMonthDate.slice(0,7)){showMessage('La fecha debe pertenecer al mes seleccionado.','error','app');return;}
+  if(!dateBelongsToBillingPeriod(transactionDate,selectedMonthDate)){
+    const {start,end}=billingWindowForPeriod(selectedMonthDate);
+    showMessage(`Para este período la fecha debe estar entre ${start.split('-').reverse().join('/')} y ${end.split('-').reverse().join('/')}.`,'error','app');
+    return;
+  }
   const button=transactionForm.querySelector('button[type="submit"]');
   button.disabled=true; button.textContent='Guardando…';
   const {data,error}=await supabase.from('transactions').insert({
@@ -1039,7 +1077,7 @@ function renderMonthNavigator(){
   const index=availablePeriods.findIndex(p=>p.month_date===selectedMonthDate);
   prev.disabled=index<=0;
   next.disabled=index<0 || index>=availablePeriods.length-1;
-  badge.classList.toggle('hidden',selectedMonthDate!==monthDateString());
+  badge.classList.toggle('hidden',selectedMonthDate!==billingPeriodMonthDate());
 }
 
 function applyMonthReadOnlyState(){
@@ -1088,7 +1126,7 @@ if(monthNext){
 
 document.querySelector('#return-current-month').addEventListener('click',async()=>{
   clearMessage('app');
-  await selectMonth(monthDateString());
+  await selectMonth(billingPeriodMonthDate());
   setView('configure');
 });
 
