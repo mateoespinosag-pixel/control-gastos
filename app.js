@@ -184,6 +184,7 @@ tabRegister.addEventListener('click',()=>setAuthMode('register'));
 document.querySelectorAll('.nav-tab[data-view]').forEach(btn=>btn.addEventListener('click',()=>{
   if(btn.dataset.view==='transactions'){
     selectedTransactionCategoryId=null;
+    renderTransactionForm();
     renderTransactions();
   }
   setView(btn.dataset.view);
@@ -192,6 +193,7 @@ const clearTransactionsFilterButton=document.querySelector('#clear-transactions-
 if(clearTransactionsFilterButton){
   clearTransactionsFilterButton.addEventListener('click',()=>{
     selectedTransactionCategoryId=null;
+    renderTransactionForm();
     renderTransactions();
   });
 }
@@ -646,6 +648,9 @@ function renderTransactionForm(){
     option.value=c.id;
     option.textContent=c.name;
     select.appendChild(option);
+  }
+  if(selectedTransactionCategoryId && categories.some(c=>c.id===selectedTransactionCategoryId)){
+    select.value=selectedTransactionCategoryId;
   }
   const todayString=localDateString();
   const currentBillingPeriod=billingPeriodMonthDate();
