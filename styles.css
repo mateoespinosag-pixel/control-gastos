@@ -681,3 +681,16 @@ input:focus,select:focus{border-color:#80baff;box-shadow:0 0 0 4px rgba(0,122,25
   }
   .month-select{font-size:14px}
 }
+
+/* Enhanced app motion */
+.nav-tab{transform-origin:center}
+.nav-tab.active{box-shadow:0 5px 14px rgba(0,122,255,.10)}
+.category-card[role="button"]{transition:transform .18s ease,box-shadow .22s ease,border-color .22s ease}
+.category-card[role="button"]:active{transform:scale(.975)}
+.global-month-nav,.hero-card,.summary-card,.panel,.transaction-row,.category-card{
+  backface-visibility:hidden;
+  -webkit-backface-visibility:hidden;
+}
+@media(prefers-reduced-motion:reduce){
+  .nav-tab,.category-card[role="button"]{transition:none!important}
+}
