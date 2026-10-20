@@ -1081,7 +1081,7 @@ function renderMonthNavigator(){
 }
 
 function applyMonthReadOnlyState(){
-  const isPast=selectedMonthDate<monthDateString();
+  const isPast=selectedMonthDate<billingPeriodMonthDate();
   const editableControls=[
     incomeInput,
     ...document.querySelectorAll('.budget-amount,.budget-percent'),
@@ -1201,7 +1201,7 @@ document.querySelector('#create-next-month').addEventListener('click',async()=>{
 });
 
 async function refreshAppData(){
-  selectedMonthDate=monthDateString();
+  selectedMonthDate=billingPeriodMonthDate();
   const [loadedCategories,loadedBase,period]=await Promise.all([
     loadCategories(),loadBaseBudgets(),loadPeriod(selectedMonthDate),loadAvailablePeriods()
   ]);
