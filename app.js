@@ -468,6 +468,9 @@ function renderHome(){
     progress.querySelector('span').style.width=`${Math.max(0,Math.min(pct,100))}%`;
     const openCategory=()=>{
       selectedTransactionCategoryId=c.id;
+      renderTransactionForm();
+      const categorySelect=document.querySelector('#transaction-category');
+      if(categorySelect)categorySelect.value=c.id;
       renderTransactions();
       setView('transactions');
     };
