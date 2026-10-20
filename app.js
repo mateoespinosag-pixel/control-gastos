@@ -41,6 +41,7 @@ let selectedMonthDate=monthDateString();
 let comparisonCurrentPeriod=null;
 let selectedTransactionCategoryId=null;
 let availablePeriods=[];
+let billingCutoffDay=null;
 
 function money(value){
   return new Intl.NumberFormat('es-EC',{style:'currency',currency:'USD',minimumFractionDigits:2}).format(Number(value||0));
@@ -57,7 +58,7 @@ function monthDateString(date=new Date()){
   return `${y}-${m}-01`;
 }
 
-const CARD_CUTOFF_DAY=18;
+
 
 function localDateString(date=new Date()){
   const y=date.getFullYear();
@@ -67,15 +68,21 @@ function localDateString(date=new Date()){
 }
 
 function billingPeriodMonthDate(date=new Date()){
+  if(!billingCutoffDay)return monthDateString(date);
   const d=new Date(date.getFullYear(),date.getMonth(),1);
-  if(date.getDate()>CARD_CUTOFF_DAY)d.setMonth(d.getMonth()+1,1);
+  if(date.getDate()>billingCutoffDay)d.setMonth(d.getMonth()+1,1);
   return monthDateString(d);
 }
 
 function billingWindowForPeriod(periodMonthDate){
   const period=new Date(periodMonthDate+'T12:00:00');
-  const end=new Date(period.getFullYear(),period.getMonth(),CARD_CUTOFF_DAY);
-  const start=new Date(period.getFullYear(),period.getMonth()-1,CARD_CUTOFF_DAY+1);
+  if(!billingCutoffDay){
+    const start=new Date(period.getFullYear(),period.getMonth(),1);
+    const end=new Date(period.getFullYear(),period.getMonth()+1,0);
+    return {start:localDateString(start),end:localDateString(end)};
+  }
+  const end=new Date(period.getFullYear(),period.getMonth(),billingCutoffDay);
+  const start=new Date(period.getFullYear(),period.getMonth()-1,billingCutoffDay+1);
   return {start:localDateString(start),end:localDateString(end)};
 }
 
@@ -315,7 +322,7 @@ forgotPasswordButton.addEventListener('click',async()=>{
 logoutButton.addEventListener('click',async()=>{await supabase.auth.signOut();await renderSession();});
 
 async function loadProfile(userId){
-  const {data,error}=await supabase.from('profiles').select('name').eq('id',userId).single();
+  const {data,error}=await supabase.from('profiles').select('name,billing_cutoff_day').eq('id',userId).single();
   if(error)throw error;
   return data;
 }
@@ -734,7 +741,7 @@ async function deleteTransaction(id){
 }
 
 async function loadHistoricalData(){
-  const currentMonth=monthDateString();
+  const currentMonth=billingPeriodMonthDate();
   const [{data:periods,error:periodError},{data:tx,error:txError},{data:budgets,error:budgetError},{data:currentPeriod,error:currentError}]=await Promise.all([
     supabase.from('monthly_periods').select('id,income,month_date').lt('month_date',currentMonth).order('month_date',{ascending:true}),
     supabase.from('transactions').select('monthly_period_id,category_id,amount,transaction_date'),
@@ -781,7 +788,7 @@ function renderComparisons(){
     : 0;
   const currentSavings=currentIncome-currentSpent;
 
-  document.querySelector('#comparison-current-month').textContent=monthLabel();
+  document.querySelector('#comparison-current-month').textContent=monthLabel(new Date(billingPeriodMonthDate()+'T12:00:00'));
   document.querySelector('#comparison-current-income').textContent=money(currentIncome);
   document.querySelector('#comparison-current-spent').textContent=money(currentSpent);
   document.querySelector('#comparison-current-savings').textContent=money(currentSavings);
@@ -1233,6 +1240,7 @@ async function renderSession(){
     setView('home');
 
     const profile=await loadProfile(currentUser.id);
+    billingCutoffDay=profile.billing_cutoff_day?Number(profile.billing_cutoff_day):null;
     document.querySelector('#welcome-title').textContent=`Hola, ${profile.name}`;
     await refreshAppData();
     await refreshPasskeyStatus();
