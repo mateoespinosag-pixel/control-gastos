@@ -663,8 +663,16 @@ function renderTransactionForm(){
     ? todayString
     : end;
   const submitButton=transactionForm.querySelector('button[type="submit"]');
-  submitButton.disabled=!isCurrentBillingPeriod;
-  submitButton.textContent=isCurrentBillingPeriod?'Registrar gasto':'Solo período actual';
+  const warning=document.querySelector('#past-period-warning');
+  const isPastPeriod=selectedMonthDate<currentBillingPeriod;
+  submitButton.disabled=!activePeriod;
+  submitButton.textContent='Registrar gasto';
+  if(warning){
+    warning.classList.toggle('hidden',!isPastPeriod);
+    warning.textContent=isPastPeriod
+      ? `Estás registrando un gasto atrasado en ${monthLabel(new Date(selectedMonthDate+'T12:00:00'))}.`
+      : '';
+  }
 }
 
 function renderTransactions(){
@@ -726,8 +734,7 @@ function parseDecimalInput(value){
 
 transactionForm.addEventListener('submit',async(e)=>{
   e.preventDefault(); clearMessage('app');
-  if(selectedMonthDate!==billingPeriodMonthDate()){showMessage('Los movimientos solo se registran en el período de tarjeta actual.','error','app');return;}
-  if(!activePeriod){showMessage('Primero configura el período actual.','error','app');setView('configure');return;}
+  if(!activePeriod){showMessage('Primero configura este período antes de registrar gastos.','error','app');setView('configure');return;}
   const transactionDate=document.querySelector('#transaction-date').value;
   const description=document.querySelector('#transaction-description').value.trim();
   const categoryId=document.querySelector('#transaction-category').value;
